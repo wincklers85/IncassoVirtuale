@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incasso Virtuale AWP — 58mm</title>
+<style>
+  :root{
+    --bg:#f6f4ef;
+    --panel:#ffffff;
+    --line:#dedbd3;
+    --ink:#222;
+    --muted:#666;
+    --good:#0f7a2a;
+    --bad:#a32121;
+    --pillposbg:#e8f6ed;
+    --pillposbd:#a7dfba;
+    --pillnegbg:#fdecec;
+    --pillnegbd:#f0a7aa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family: Inter, sans-serif; line-height:1.25;}
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:#fbfaf7; border-bottom:1px solid var(--line);
+    padding:10px 12px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .pill{font-weight:800; font-size:13px; border-radius:999px; padding:6px 10px; border:1px solid var(--line);}
+  .pill.pos{background:var(--pillposbg); border-color:var(--pillposbd); color:var(--good)}
+  .pill.neg{background:var(--pillnegbg); border-color:var(--pillnegbd); color:var(--bad)}
+  .pill.neu{background:#eee; color:#333}
+  .btn{border:1px solid var(--line); background:#fff; border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer;}
+  .btn.primary{background:#eef3fb; border-color:#c7d6f4; color:#274b87}
+  .wrap{padding:12px; max-width:1000px; margin:0 auto}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px}
+  .card h2{margin:0 0 8px; font-size:16px}
+  .row4{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+  .row3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+  @media (max-width:900px){ .row3,.row4{grid-template-columns:1fr} }
+  label{font-size:13px; color:#444; margin-bottom:6px; display:block}
+  input[type=number],input[type=text],input[type=date]{width:100%; padding:12px; border-radius:10px; border:1px solid #cec9bf; background:#fff; font-size:16px}
+  table{width:100%; border-collapse:separate; border-spacing:0; font-size:15px}
+  th,td{padding:10px 6px; text-align:right; border-bottom:1px dashed #d7d3cc}
+  td:first-child, th:first-child{text-align:left}
+  th{background:#f6f4f0; font-weight:700}
+  .muted{color:var(--muted)}
+  .sep{height:1px; background:var(--line); margin:10px 0}
+  #ticketArea{display:none}
+  @media print{
+    body{background:#fff}
+    .topbar,.wrap{display:none}
+    #ticketArea{display:block}
+  }
+  #ticketArea pre{font-family:monospace; font-size:12px; white-space:pre}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <h1 style="margin:0;font-size:18px">Incasso Virtuale AWP</h1>
+      <div id="subInfo" style="font-size:12px;color:#666">Locale: — • Data: —</div>
+    </div>
+    <div>
+      <div id="diffPill" class="pill neu" style="margin-bottom:6px">—</div>
+      <button id="btnPrint" class="btn primary">Stampa 58mm (testo)</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <section class="card">
+      <h2>Dati</h2>
+      <div class="row4">
+        <div><label>Nome locale</label><input id="nomeLocale" type="text"></div>
+        <div><label>Data incasso</label><input id="dataIncasso" type="date"></div>
+        <div><label>Note</label><input id="note" type="text"></div>
+        <div><label>Acconti periodo (€)</label><input id="accontiPeriodo" type="number" step="0.01" value="0"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="row4">
+        <div><label>Quantità Slot</label><input id="qSlot" type="number" value="4"></div>
+        <div><label>Quantità Cambiamonete</label><input id="qChg" type="number" value="1"></div>
+        <div><label>Fondo per singola Slot (€)</label><input id="fondoSlotUnit" type="number" value="150"></div>
+        <div><label>Fondo per singolo Cambia (€)</label><input id="fondoChgUnit" type="number" value="1000"></div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn" id="applyQuant">Applica quantità</button>
+        <button class="btn" id="applyFunds">Applica fondi</button>
+        <button class="btn" id="demo">Demo</button>
+        <button class="btn" id="reset">Reset</button>
+        <button class="btn" id="save">Salva JSON</button>
+        <button class="btn" id="load">Carica JSON</button>
+        <input id="fileJson" type="file" accept="application/json" style="display:none">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Slot</h2>
+      <table id="tblSlot">
+        <thead><tr><th>#</th><th>Monete</th><th>IN</th><th>OUT</th><th>Utile</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td class="muted">Somme</td><td id="sumMoneteSlot_f">€0</td><td id="sumIn_f">€0</td><td id="sumOut_f">€0</td><td id="sumUtile_f">€0</td></tr></tfoot>
+      </table>
+      <div class="row3" style="margin-top:10px">
+        <div><label>Altre monete</label><input id="altreMonete" type="number" value="0"></div>
+        <div><label>Altre banconote</label><input id="altreBanconote" type="number" value="0"></div>
+        <div><label>Tot. extra</label><input id="sumExtraView" type="text" disabled></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Cambiamonete</h2>
+      <table id="tblChg">
+        <thead><tr><th>#</th><th>Fondo</th><th>Monete</th><th>Banconote</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td class="muted">Somme</td><td id="sumFondoChg_f">€0</td><td id="sumMoneteChg_f">€0</td><td id="sumBancChg_f">€0</td></tr></tfoot>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Riepilogo</h2>
+      <table>
+        <tbody>
+          <tr><td>Totale fondi Slot</td><td id="totFondiSlot">€0</td></tr>
+          <tr><td>Totale fondi Cambia</td><td id="totFondiChg">€0</td></tr>
+          <tr><td>Totale fondi (S+C)</td><td id="totFondi">€0</td></tr>
+          <tr><td>Monete Slot</td><td id="sumMoneteSlot">€0</td></tr>
+          <tr><td>Monete Cambia</td><td id="sumMoneteChg">€0</td></tr>
+          <tr><td>Banconote Cambia</td><td id="sumBancChg">€0</td></tr>
+          <tr><td>Extra</td><td id="sumAltre">€0</td></tr>
+          <tr><td>Acconti</td><td id="sumAcconti">€0</td></tr>
+          <tr><td>Utili lordi Σ(IN−OUT)</td><td id="sumUtili">€0</td></tr>
+          <tr><td><b>Incasso Virtuale</b></td><td id="virtual"><b>€0</b></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <div id="ticketArea"><pre id="ticketText"></pre></div>
+
+<script>
+  const $=(s)=>document.querySelector(s);
+  const eur=(n)=>"€"+(+n||0).toFixed(2);
+
+  const nomeLocale=$('#nomeLocale'), dataIncasso=$('#dataIncasso'), note=$('#note'), accontiPeriodo=$('#accontiPeriodo');
+  const qSlot=$('#qSlot'), qChg=$('#qChg'), fondoSlotUnit=$('#fondoSlotUnit'), fondoChgUnit=$('#fondoChgUnit');
+  const tblSlot=$('#tblSlot tbody'), tblChg=$('#tblChg tbody');
+  const altreMonete=$('#altreMonete'), altreBanconote=$('#altreBanconote'), sumExtraView=$('#sumExtraView');
+  const diffPill=$('#diffPill'), subInfo=$('#subInfo');
+
+  function buildTables(){
+    tblSlot.innerHTML=''; tblChg.innerHTML='';
+    for(let i=0;i<+qSlot.value;i++){
+      let tr=document.createElement('tr');
+      tr.innerHTML=`<td>S${i+1}</td>
+        <td><input type="number" data-k="monete" value="0"></td>
+        <td><input type="number" data-k="in" value="0"></td>
+        <td><input type="number" data-k="out" value="0"></td>
+        <td data-k="utile">€0</td>`;
+      tblSlot.appendChild(tr);
+    }
+    for(let i=0;i<+qChg.value;i++){
+      let tr=document.createElement('tr');
+      tr.innerHTML=`<td>C${i+1}</td>
+        <td><input type="number" data-k="fondo" value="${fondoChgUnit.value}"></td>
+        <td><input type="number" data-k="monete" value="0"></td>
+        <td><input type="number" data-k="banconote" value="0"></td>`;
+      tblChg.appendChild(tr);
+    }
+    document.querySelectorAll('input').forEach(el=>el.addEventListener('input',calc));
+  }
+  buildTables();
+
+  function calc(){
+    let sRows=[...tblSlot.querySelectorAll('tr')];
+    let sMon=0,sIn=0,sOut=0,sU=0;
+    sRows.forEach(r=>{
+      let m=+r.querySelector('[data-k="monete"]').value||0;
+      let i=+r.querySelector('[data-k="in"]').value||0;
+      let o=+r.querySelector('[data-k="out"]').value||0;
+      let u=i-o;
+      r.querySelector('[data-k="utile"]').textContent=eur(u);
+      sMon+=m;sIn+=i;sOut+=o;sU+=u;
+    });
+    let cRows=[...tblChg.querySelectorAll('tr')];
+    let fC=0,mC=0,bC=0;
+    cRows.forEach(r=>{
+      fC+=+r.querySelector('[data-k="fondo"]').value||0;
+      mC+=+r.querySelector('[data-k="monete"]').value||0;
+      bC+=+r.querySelector('[data-k="banconote"]').value||0;
+    });
+    let aM=+altreMonete.value||0,aB=+altreBanconote.value||0,acc=+accontiPeriodo.value||0;
+    sumExtraView.value=eur(aM+aB);
+    let totFondi=(+fondoSlotUnit.value||0)*+qSlot.value + fC;
+    let sommaValori=sMon+mC+bC+aM+aB+acc;
+    let virtual=sommaValori - totFondi - sU;
+    $('#virtual').textContent=eur(virtual);
+    diffPill.className='pill ' + (virtual>0?'pos':virtual<0?'neg':'neu');
+    diffPill.textContent=virtual>0?'Crescono '+eur(virtual):virtual<0?'Mancano '+eur(virtual):'OK — Zero';
+  }
+  document.querySelectorAll('input').forEach(el=>el.addEventListener('input',calc));
+  $('#applyQuant').onclick=()=>{buildTables();calc();};
+  $('#applyFunds').onclick=()=>{tblChg.querySelectorAll('[data-k="fondo"]').forEach(f=>f.value=fondoChgUnit.value);calc();}
+  $('#reset').onclick=()=>{localStorage.removeItem('iv58_state');location.reload();}
+  $('#demo').onclick=()=>{qSlot.value=2;qChg.value=1;buildTables();
+    let s=[{m:300,in:2000,out:1800},{m:400,in:2100,out:2000}];
+    [...tblSlot.querySelectorAll('tr')].forEach((r,i)=>{r.querySelector('[data-k="monete"]').value=s[i].m;r.querySelector('[data-k="in"]').value=s[i].in;r.querySelector('[data-k="out"]').value=s[i].out;});
+    let c={f:1000,m:800,b:1200};
+    let r=tblChg.querySelector('tr');r.querySelector('[data-k="fondo"]').value=c.f;r.querySelector('[data-k="monete"]').value=c.m;r.querySelector('[data-k="banconote"]').value=c.b;
+    altreMonete.value=50;altreBanconote.value=100;accontiPeriodo.value=500;calc();};
+  $('#btnPrint').onclick=()=>{buildTicket();window.print();};
+
+  function buildTicket(){
+    const lines=[];
+    lines.push((nomeLocale.value||'INCASSO').toUpperCase());
+    lines.push('Data: '+(dataIncasso.value||new Date().toLocaleDateString('it-IT')));
+    lines.push('--------------------------------');
+    let sRows=[...tblSlot.querySelectorAll('tr')];
+    sRows.forEach((r,i)=>{
+      let m=r.querySelector('[data-k="monete"]').value;
+      let iN=r.querySelector('[data-k="in"]').value;
+      let o=r.querySelector('[data-k="out"]').value;
+      let u=iN-o;
+      lines.push(`S${i+1} M:${m} IN:${iN} O:${o} U:${u}`);
+    });
+    let cRows=[...tblChg.querySelectorAll('tr')];
+    cRows.forEach((r,i)=>{
+      let f=r.querySelector('[data-k="fondo"]').value;
+      let m=r.querySelector('[data-k="monete"]').value;
+      let b=r.querySelector('[data-k="banconote"]').value;
+      lines.push(`C${i+1} F:${f} M:${m} B:${b}`);
+    });
+    lines.push('--------------------------------');
+    lines.push($('#diffPill').textContent);
+    if(note.value){lines.push('NOTE: '+note.value);}
+    $('#ticketText').textContent=lines.join('\\n');
+  }
+</script>
+</body>
+</html>
