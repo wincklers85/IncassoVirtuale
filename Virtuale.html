@@ -4,702 +4,689 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Incasso Virtuale AWP — 58mm</title>
+<!-- Grafici: carico Chart.js da CDN (se offline mostra solo numeri) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  /* ===== Tema crema/grigio pulito ===== */
-  :root{
-    --bg:#f6f4ef;
-    --panel:#ffffff;
-    --ink:#222222;
-    --muted:#666666;
-    --line:#dcd8d0;
-    --line-strong:#bdb7ad;
-
-    --good:#106e2a;
-    --bad:#a32228;
-
-    --pill-pos-bg:#e7f6ec;
-    --pill-pos-bd:#a6dbb5;
-    --pill-neg-bg:#fdebec;
-    --pill-neg-bd:#f0a1a5;
-
-    --focus:#2b6cb0;
-    --accent:#2f4f84;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-    line-height:1.25;
-  }
-
-  /* ===== Barra superiore sempre visibile ===== */
-  .topbar{
-    position:sticky; top:0; z-index:50;
-    background:linear-gradient(180deg,#fbfaf7,#f1eee8);
-    border-bottom:1px solid var(--line);
-    padding:10px 12px;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-  }
-  .brand h1{margin:0; font-size:18px}
-  .sub{color:var(--muted); font-size:12px; margin-top:4px}
-  .status{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-  .pill{
-    font-weight:800; font-size:13px; border-radius:999px; padding:6px 10px;
-    border:1px solid var(--line);
-  }
-  .pill.pos{background:var(--pill-pos-bg); border-color:var(--pill-pos-bd); color:var(--good)}
-  .pill.neg{background:var(--pill-neg-bg); border-color:var(--pill-neg-bd); color:var(--bad)}
-  .pill.neu{background:#eeeeee; color:#333}
-
-  .btn{
-    border:1px solid var(--line); background:#fff; border-radius:10px;
-    padding:10px 12px; font-weight:700; cursor:pointer; color:#263a64;
-  }
-  .btn:hover{filter:brightness(0.98)}
-  .btn:focus{outline:3px solid #cfe2ff; border-color:#aac8ff}
-  .btn.primary{background:#eef3fb; border-color:#c7d6f4; color:#274b87}
-  .btn.ghost{background:#ffffff}
-
-  /* ===== Layout ===== */
-  .wrap{padding:12px; max-width:1100px; margin:0 auto}
-  .grid{display:grid; grid-template-columns:1fr; gap:12px}
-  @media (min-width:980px){ .grid{grid-template-columns:1.1fr .9fr} }
-  .card{
-    background:linear-gradient(180deg,var(--panel),#fdfcf9);
-    border:1px solid var(--line);
-    border-radius:14px; padding:14px;
-  }
-  .card h2{margin:0 0 8px; font-size:16px}
-  .muted{color:var(--muted)}
-  .sep{height:1px; background:var(--line); margin:10px 0}
-
-  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-  .row3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
-  .row4{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
-  @media (max-width:900px){ .row2,.row3,.row4{grid-template-columns:1fr} }
-
-  label{font-size:13px; color:#444; margin-bottom:6px; display:block}
-  input[type=number],input[type=text],input[type=date]{
-    width:100%; padding:12px; border-radius:10px; border:1px solid #cec9bf; background:#fff; font-size:16px; color:#222;
-  }
-  input:focus{outline:3px solid #d7e8ff; border-color:#b7cff1}
-
-  table{width:100%; border-collapse:separate; border-spacing:0; font-size:15px}
-  th,td{padding:10px 6px; text-align:right; border-bottom:1px dashed var(--line)}
-  td:first-child, th:first-child{text-align:left}
-  th{
-    background:#f6f4f0; font-weight:700; color:#3a3a3a;
-    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-  }
-
-  .stat-badges{display:flex; gap:8px; flex-wrap:wrap;}
-  .badge{
-    background:#fff; border:1px solid var(--line); border-radius:999px;
-    padding:6px 10px; font-size:12px; color:#394867;
-  }
-
-  /* ===== Ticket preview & print ===== */
-  .ticket-preview-wrap{display:none; margin-top:10px}
-  .ticket-preview{
-    width:58mm; max-width:100%; background:#fff; color:#000;
-    border:1px dashed var(--line-strong); border-radius:6px;
-    padding:6mm 4mm;
-    box-shadow:0 2px 10px #0000001a;
-  }
-  .t-head{
-    border:2px solid var(--line-strong); border-radius:6px; padding:6px; text-align:center;
-    margin-bottom:6px;
-  }
-  .t-head .title{font-weight:800; font-size:14px}
-  .t-head .sub{font-size:11px; color:#333}
-  .t-sec{margin:6px 0}
-  .t-sec h4{margin:0 0 4px; font-size:12px; border-bottom:1px solid #bbb; padding-bottom:2px}
-  .t-row{display:flex; justify-content:space-between; font-size:12px; padding:2px 0}
-  .t-row b{font-weight:700}
-  .t-foot{border-top:2px dashed #999; margin-top:6px; padding-top:6px; font-size:12px}
-  .t-emph{
-    border:2px solid #000; border-radius:4px; padding:4px; text-align:center; font-weight:800; margin-top:4px;
-  }
-  .t-note{font-size:11px; margin-top:6px}
-
-  @page{ size:58mm auto; margin:2mm }
-  @media print{
-    body{background:#fff}
-    .topbar, .wrap{display:none !important}
-    .ticket-print{display:block !important}
-  }
-  .ticket-print{display:none}
+:root{
+  --bg:#f6f4ef; --panel:#ffffff; --ink:#222; --muted:#666;
+  --line:#dcd8d0; --line-strong:#bdb7ad;
+  --good:#106e2a; --bad:#a32228;
+  --pill-pos-bg:#e7f6ec; --pill-pos-bd:#a6dbb5;
+  --pill-neg-bg:#fdebec; --pill-neg-bd:#f0a1a5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:Inter,system-ui,Arial,sans-serif;color:var(--ink);line-height:1.25}
+h1,h2{margin:0}
+.muted{color:var(--muted)}
+/* Topbar */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:linear-gradient(180deg,#fbfaf7,#f1eee8);border-bottom:1px solid var(--line);padding:10px 12px}
+.brand h1{font-size:16px;margin:0}
+#subInfo{font-size:12px;color:var(--muted)}
+.pill{font-weight:800;font-size:13px;border-radius:999px;padding:6px 10px;border:1px solid var(--line)}
+.pill.pos{background:var(--pill-pos-bg);border-color:var(--pill-pos-bd);color:var(--good)}
+.pill.neg{background:var(--pill-neg-bg);border-color:var(--pill-neg-bd);color:var(--bad)}
+.pill.neu{background:#eee;color:#333}
+.btn{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font-weight:700}
+.btn.primary{background:#eef3fb;color:#274b87;border-color:#c7d6f4}
+label.tog{font-size:12px;margin-left:8px}
+/* Hamburger + Sidebar */
+.hamburger{font-size:22px;cursor:pointer;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.sidebar{position:fixed;left:-270px;top:0;width:270px;height:100%;background:#fff;box-shadow:2px 0 10px #0002;transition:.3s;z-index:40;padding:18px}
+.sidebar.active{left:0}
+.sidebar h3{margin:0 0 10px}
+.sidebar a{display:block;text-decoration:none;color:#222;padding:8px 0;font-weight:700}
+/* Layout */
+.wrap{padding:12px;max-width:1120px;margin:auto}
+.card{background:linear-gradient(180deg,var(--panel),#fdfcf9);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.card h2{font-size:16px;margin:0 0 8px}
+.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:900px){.row4,.row3{grid-template-columns:1fr}}
+input[type=text],input[type=number],input[type=date]{width:100%;padding:10px;border:1px solid #cfc8be;border-radius:10px;background:#fff;font-size:15px}
+input:focus{outline:3px solid #d7e8ff;border-color:#b7cff1}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px dashed var(--line);text-align:right}
+td:first-child,th:first-child{text-align:left}
+th{background:#f6f4f0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+/* Modals */
+.modal{display:none;position:fixed;inset:0;z-index:60;align-items:center;justify-content:center;background:#0008}
+.modal.on{display:flex}
+.modal .box{background:#fff;border-radius:10px;max-width:92vw;max-height:90vh;overflow:auto;padding:16px;border:1px solid var(--line)}
+.modal .close{float:right;cursor:pointer;font-weight:900;font-size:20px}
+.modal h2{margin-top:0}
+.modal .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.modal .grid2{grid-template-columns:1fr}}
+/* Ticket grafico preview */
+.ticket{width:58mm;max-width:100%;background:#fff;color:#000;border:1px dashed var(--line-strong);border-radius:6px;padding:6mm 4mm}
+.t-head{border:2px solid var(--line-strong);border-radius:6px;padding:6px;text-align:center;margin-bottom:6px}
+.t-head .title{font-weight:800;font-size:14px}
+.t-head .sub{font-size:11px;color:#333}
+.t-sec{margin:6px 0}
+.t-sec h4{margin:0 0 4px;font-size:12px;border-bottom:1px solid #bbb;padding-bottom:2px}
+.t-row{display:flex;justify-content:space-between;font-size:12px;padding:1px 0}
+.t-row b{font-weight:700}
+.t-foot{border-top:2px dashed #999;margin-top:6px;padding-top:6px;font-size:12px}
+.t-emph{border:2px solid #000;border-radius:4px;padding:4px;text-align:center;font-weight:800;margin-top:4px}
+/* Print areas */
+.print-area{display:none}
+@page{size:58mm auto;margin:2mm}
+@media print{
+  body{background:#fff}
+  .topbar,.wrap,.sidebar{display:none!important}
+  .print-area.active{display:block!important}
+}
+pre.ticket-text{font-family:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;font-size:12px;line-height:1.25;white-space:pre}
 </style>
 </head>
 <body>
-  <div class="topbar">
+<!-- TOP -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
     <div class="brand">
       <h1>Incasso Virtuale AWP</h1>
-      <div id="subInfo" class="sub">Locale: — • Data: —</div>
-    </div>
-    <div class="status">
-      <span id="diffPill" class="pill neu">—</span>
-      <button id="btnPreview" class="btn ghost">Anteprima Ticket</button>
-      <button id="btnPrint" class="btn primary">Stampa Ticket 58 mm</button>
+      <div id="subInfo" class="muted" style="font-size:12px">Locale: — • Data: —</div>
     </div>
   </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span id="diffPill" class="pill neu">—</span>
+    <label class="tog"><input type="radio" name="mode" value="grafico" checked> Grafico</label>
+    <label class="tog"><input type="radio" name="mode" value="testo"> Testo 32 col</label>
+    <button id="btnPreview" class="btn">Anteprima</button>
+    <button id="btnPrint" class="btn primary">Stampa</button>
+  </div>
+</div>
 
-  <div class="wrap">
-    <div class="grid">
-      <!-- DATI -->
-      <section class="card">
-        <h2>Dati</h2>
-        <div class="row4">
-          <div><label>Nome locale</label><input id="nomeLocale" type="text" placeholder="Es. Bar Gallo Nero"></div>
-          <div><label>Data incasso</label><input id="dataIncasso" type="date"></div>
-          <div><label>Note</label><input id="note" type="text" placeholder="Annotazioni facoltative"></div>
-          <div><label>Acconti periodo (€)</label><input id="accontiPeriodo" type="number" step="0.01" value="0"></div>
-        </div>
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <h3>Menu</h3>
+  <a href="#" onclick="openModal('mAnteprima')">📄 Anteprima</a>
+  <a href="#" onclick="openModal('mStats')">📊 Statistiche</a>
+  <a href="#" onclick="openModal('mGuida')">ℹ️ Guida</a>
+  <a href="#" onclick="openModal('mCreatore')">👤 Creatore</a>
+</aside>
 
-        <div class="sep"></div>
-        <div class="row4">
-          <div><label>Quantità Slot</label><input id="qSlot" type="number" min="0" step="1" value="4"></div>
-          <div><label>Quantità Cambiamonete</label><input id="qChg" type="number" min="0" step="1" value="1"></div>
-          <div><label>Fondo per singola Slot (€)</label><input id="fondoSlotUnit" type="number" min="0" step="0.01" value="150"></div>
-          <div><label>Fondo per singolo Cambiamonete (€)</label><input id="fondoChgUnit" type="number" min="0" step="0.01" value="1000"></div>
-        </div>
+<div class="wrap">
+  <!-- DATI -->
+  <section class="card">
+    <h2>Dati</h2>
+    <div class="row4">
+      <div><label>Nome locale</label><input id="nomeLocale" placeholder="Es. Bar Gallo Nero"></div>
+      <div><label>Data incasso</label><input id="dataIncasso" type="date"></div>
+      <div><label>Note</label><input id="note" placeholder="Annotazioni facoltative"></div>
+      <div><label>Acconti periodo (€)</label><input id="accontiPeriodo" type="number" step="0.01" value="0"></div>
+    </div>
+    <div class="row4" style="margin-top:8px">
+      <div><label>Quantità Slot</label><input id="qSlot" type="number" min="0" step="1" value="4"></div>
+      <div><label>Quantità Cambiamonete</label><input id="qChg" type="number" min="0" step="1" value="1"></div>
+      <div><label>Fondo per singola Slot (€)</label><input id="fondoSlotUnit" type="number" min="0" step="0.01" value="150"></div>
+      <div><label>Fondo per singolo Cambiamonete (€)</label><input id="fondoChgUnit" type="number" min="0" step="0.01" value="1000"></div>
+    </div>
+    <div class="row4" style="margin-top:8px">
+      <div><label>PREU % su IN</label><input id="preuPerc" type="number" step="0.1" value="24"></div>
+      <div><label>AAMS % su IN</label><input id="aamsPerc" type="number" step="0.1" value="0.8"></div>
+      <div><label>Rete % su IN</label><input id="retePerc" type="number" step="0.1" value="1"></div>
+      <div><label>% Esercente su Netto</label><input id="percEsercente" type="number" step="0.1" value="50"></div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="buildTables()">Applica quantità</button>
+      <button class="btn" onclick="demo()">Demo</button>
+      <span class="muted" style="font-size:12px">Tutto in RAM (nessun salvataggio)</span>
+    </div>
+  </section>
 
-        <div class="sep"></div>
-        <!-- Parametri fiscali e ripartizione -->
-        <div class="row4">
-          <div><label>PREU % su IN</label><input id="preuPerc" type="number" step="0.1" value="24"></div>
-          <div><label>AAMS % su IN</label><input id="aamsPerc" type="number" step="0.1" value="0.8"></div>
-          <div><label>Rete % su IN</label><input id="retePerc" type="number" step="0.1" value="1"></div>
-          <div><label>% Esercente su Netto</label><input id="percEsercente" type="number" step="0.1" value="50"></div>
-        </div>
+  <!-- SLOT -->
+  <section class="card">
+    <h2>Slot (Monete + IN/OUT)</h2>
+    <div class="muted" style="margin-bottom:6px">Utile lordo = IN − OUT. Inserisci valori per ogni slot.</div>
+    <div style="overflow:auto">
+      <table id="tblSlot">
+        <thead><tr><th>#</th><th>Monete (€)</th><th>IN (€)</th><th>OUT (€)</th><th>Utile (€)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr><td class="muted">Somme</td><td id="sumMoneteSlot_f">€ 0,00</td><td id="sumIn_f">€ 0,00</td><td id="sumOut_f">€ 0,00</td><td id="sumUtile_f">€ 0,00</td></tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="row3" style="margin-top:8px">
+      <div><label>Altre monete (€)</label><input id="altreMonete" type="number" step="0.01" value="0"></div>
+      <div><label>Altre banconote (€)</label><input id="altreBanconote" type="number" step="0.01" value="0"></div>
+      <div><label>Totale extra</label><input id="sumExtraView" type="text" readonly value="€ 0,00"></div>
+    </div>
+  </section>
 
-        <div class="sep"></div>
-        <div class="stat-badges">
-          <span class="badge">Fondi Slot: <b id="bFondiSlot">€ 0,00</b></span>
-          <span class="badge">Fondi Cambia: <b id="bFondiChg">€ 0,00</b></span>
-          <span class="badge">Σ Fondi: <b id="bFondiTot">€ 0,00</b></span>
-        </div>
+  <!-- CAMBIAMONETE -->
+  <section class="card">
+    <h2>Cambiamonete</h2>
+    <div style="overflow:auto">
+      <table id="tblChg">
+        <thead><tr><th>#</th><th>Fondo (€)</th><th>Monete (€)</th><th>Banconote (€)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td class="muted">Somme</td><td id="sumFondoChg_f">€ 0,00</td><td id="sumMoneteChg_f">€ 0,00</td><td id="sumBancChg_f">€ 0,00</td></tr></tfoot>
+      </table>
+    </div>
+  </section>
 
-        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
-          <button class="btn" id="applyQuant">Applica quantità</button>
-          <button class="btn" id="applyFunds">Applica fondi unitari</button>
-          <button class="btn" id="demo">Demo</button>
-          <button class="btn" id="save">Salva JSON</button>
-          <button class="btn" id="load">Carica JSON</button>
-          <button class="btn" id="reset">Reset</button>
-          <input id="fileJson" type="file" accept="application/json" style="display:none">
-        </div>
-      </section>
-
-      <!-- RIEPILOGO -->
-      <section class="card">
-        <h2>Riepilogo</h2>
+  <!-- RIEPILOGO -->
+  <section class="card">
+    <h2>Riepilogo & Ripartizione</h2>
+    <div class="row3">
+      <div class="card" style="padding:10px">
+        <h3 style="margin:0 0 6px;font-size:14px">Fondi e Valori</h3>
         <table>
           <tbody>
-            <tr><td class="muted">Totale fondi Slot</td><td id="totFondiSlot" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Totale fondi Cambiamonete</td><td id="totFondiChg" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Totale fondi (Slot + Cambia)</td><td id="totFondi" style="text-align:right">€ 0,00</td></tr>
+            <tr><td class="muted">Totale fondi Slot</td><td id="totFondiSlot">€ 0,00</td></tr>
+            <tr><td class="muted">Totale fondi Cambiamonete</td><td id="totFondiChg">€ 0,00</td></tr>
+            <tr><td class="muted">Σ Fondi</td><td id="totFondi">€ 0,00</td></tr>
+            <tr><td class="muted">Monete Slot</td><td id="sumMoneteSlot">€ 0,00</td></tr>
+            <tr><td class="muted">Monete Cambia</td><td id="sumMoneteChg">€ 0,00</td></tr>
+            <tr><td class="muted">Banconote Cambia</td><td id="sumBancChg">€ 0,00</td></tr>
+            <tr><td class="muted">Extra (mon+ban)</td><td id="sumAltre">€ 0,00</td></tr>
+            <tr><td class="muted">Acconti periodo</td><td id="sumAcconti">€ 0,00</td></tr>
           </tbody>
         </table>
-        <div class="sep"></div>
+      </div>
+
+      <div class="card" style="padding:10px">
+        <h3 style="margin:0 0 6px;font-size:14px">Utile e Virtuale</h3>
         <table>
           <tbody>
-            <tr><td class="muted">Somma monete Slot</td><td id="sumMoneteSlot" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Somma monete Cambia</td><td id="sumMoneteChg" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Somma banconote Cambia</td><td id="sumBancChg" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Altre monete + banconote</td><td id="sumAltre" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Acconti periodo</td><td id="sumAcconti" style="text-align:right">€ 0,00</td></tr>
-            <tr><td class="muted">Somma utili lordi (ΣIN−ΣOUT)</td><td id="sumUtili" style="text-align:right">€ 0,00</td></tr>
-            <tr><td><b>Incasso Virtuale</b></td><td id="virtual" style="text-align:right"><b>€ 0,00</b></td></tr>
+            <tr><td class="muted">Σ IN</td><td id="sumInView">€ 0,00</td></tr>
+            <tr><td class="muted">Σ OUT</td><td id="sumOutView">€ 0,00</td></tr>
+            <tr><td class="muted">Σ Utile lordo (IN−OUT)</td><td id="sumUtili">€ 0,00</td></tr>
+            <tr><td><b>Incasso Virtuale</b></td><td id="virtual"><b>€ 0,00</b></td></tr>
           </tbody>
         </table>
-      </section>
+      </div>
 
-      <!-- SLOT -->
-      <section class="card" style="grid-column:1 / -1">
-        <h2>Slot (Monete + IN/OUT)</h2>
-        <div class="muted" style="margin-bottom:6px">Inserisci <b>Monete</b>, <b>IN</b>, <b>OUT</b>. L’utile lordo = IN − OUT.</div>
-        <div style="overflow:auto">
-          <table id="tblSlot">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Monete (€)</th>
-                <th>IN (€)</th>
-                <th>OUT (€)</th>
-                <th>Utile (€)</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-            <tfoot>
-              <tr>
-                <td class="muted">Somme</td>
-                <td id="sumMoneteSlot_f" style="text-align:right">€ 0,00</td>
-                <td id="sumIn_f" style="text-align:right">€ 0,00</td>
-                <td id="sumOut_f" style="text-align:right">€ 0,00</td>
-                <td id="sumUtile_f" style="text-align:right">€ 0,00</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <div class="sep"></div>
-        <div class="row3">
-          <div><label>Altre monete (€)</label><input id="altreMonete" type="number" step="0.01" value="0"></div>
-          <div><label>Altre banconote (€)</label><input id="altreBanconote" type="number" step="0.01" value="0"></div>
-          <div><label>Totale extra</label><input id="sumExtraView" type="text" value="€ 0,00" disabled></div>
-        </div>
-      </section>
-
-      <!-- CAMBIAMONETE -->
-      <section class="card" style="grid-column:1 / -1">
-        <h2>Cambiamonete</h2>
-        <div style="overflow:auto">
-          <table id="tblChg">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Fondo (€)</th>
-                <th>Monete (€)</th>
-                <th>Banconote (€)</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-            <tfoot>
-              <tr>
-                <td class="muted">Somme</td>
-                <td id="sumFondoChg_f" style="text-align:right">€ 0,00</td>
-                <td id="sumMoneteChg_f" style="text-align:right">€ 0,00</td>
-                <td id="sumBancChg_f" style="text-align:right">€ 0,00</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </section>
-
-      <!-- RIPARTIZIONE -->
-      <section class="card" style="grid-column:1 / -1">
-        <h2>Ripartizione (PREU/AAMS/Rete su IN)</h2>
-        <div class="row4">
-          <div><label>Totale IN</label><input id="rip_IN" type="text" disabled></div>
-          <div><label>Totale OUT</label><input id="rip_OUT" type="text" disabled></div>
-          <div><label>Utile lordo (IN−OUT)</label><input id="rip_UTILE" type="text" disabled></div>
-          <div><label>Tasse totali</label><input id="rip_TASSE" type="text" disabled></div>
-        </div>
-        <div class="row4" style="margin-top:10px">
-          <div><label>PREU calcolato</label><input id="rip_PREU" type="text" disabled></div>
-          <div><label>AAMS calcolato</label><input id="rip_AAMS" type="text" disabled></div>
-          <div><label>Rete calcolata</label><input id="rip_RETE" type="text" disabled></div>
-          <div><label>Netto da ripartire</label><input id="rip_NETTO" type="text" disabled></div>
-        </div>
-        <div class="row3" style="margin-top:10px">
-          <div><label>% Esercente</label><input id="rip_PERC_ES" type="text" disabled></div>
-          <div><label>Verso Esercente</label><input id="rip_ES" type="text" disabled></div>
-          <div><label>Verso Gestore</label><input id="rip_GE" type="text" disabled></div>
-        </div>
-      </section>
-
-      <!-- ANTEPRIMA TICKET -->
-      <section class="card ticket-preview-wrap" id="ticketPreviewWrap" style="grid-column:1 / -1">
-        <h2>Anteprima ticket 58 mm</h2>
-        <div class="ticket-preview" id="ticketPreview"></div>
-      </section>
+      <div class="card" style="padding:10px">
+        <h3 style="margin:0 0 6px;font-size:14px">Ripartizione su IN</h3>
+        <table>
+          <tbody>
+            <tr><td>PREU</td><td id="rip_PREU">€ 0,00</td></tr>
+            <tr><td>AAMS</td><td id="rip_AAMS">€ 0,00</td></tr>
+            <tr><td>Rete</td><td id="rip_RETE">€ 0,00</td></tr>
+            <tr><td><b>Tasse totali</b></td><td id="rip_TASSE"><b>€ 0,00</b></td></tr>
+            <tr><td>Netto da ripartire</td><td id="rip_NETTO">€ 0,00</td></tr>
+            <tr><td>% Esercente</td><td id="rip_PERC_ES">50.0 %</td></tr>
+            <tr><td><b>Verso Esercente</b></td><td id="rip_ES"><b>€ 0,00</b></td></tr>
+            <tr><td>Verso Gestore</td><td id="rip_GE">€ 0,00</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  </section>
+</div>
 
-  <!-- Ticket solo per stampa -->
-  <div class="ticket-print">
-    <div id="ticketPrint"></div>
+<!-- MODALS -->
+<div class="modal" id="mAnteprima"><div class="box">
+  <span class="close" onclick="closeModal('mAnteprima')">✖</span>
+  <h2>Anteprima di stampa</h2>
+  <div id="previewArea"></div>
+</div></div>
+
+<div class="modal" id="mStats"><div class="box">
+  <span class="close" onclick="closeModal('mStats')">✖</span>
+  <h2>Statistiche</h2>
+  <div id="statsText" class="muted" style="margin:6px 0 12px"></div>
+  <div class="grid2">
+    <div><canvas id="chartInOut"></canvas></div>
+    <div><canvas id="chartRip"></canvas></div>
   </div>
+  <div style="margin-top:12px"><canvas id="chartPayout"></canvas></div>
+  <div id="statsFallback" class="muted" style="display:none;margin-top:8px">Grafici non disponibili (offline). Ecco i numeri sopra.</div>
+</div></div>
+
+<div class="modal" id="mGuida"><div class="box">
+  <span class="close" onclick="closeModal('mGuida')">✖</span>
+  <h2>Guida rapida</h2>
+  <ol>
+    <li>Imposta quantità Slot e Cambiamonete e i fondi unitari.</li>
+    <li>Compila per ogni Slot: <b>Monete</b>, <b>IN</b>, <b>OUT</b>.</li>
+    <li>Compila per ogni Cambiamonete: <b>Fondo</b>, <b>Monete</b>, <b>Banconote</b>.</li>
+    <li>Aggiungi <b>Altre monete/banconote</b> (eventuali) e <b>Acconti periodo</b>.</li>
+    <li>Verifica la pillola in alto: <b>Mancano / Crescono / OK</b>.</li>
+    <li>Toggle “Grafico / Testo 32 col” e poi <b>Anteprima</b> o <b>Stampa</b>.</li>
+  </ol>
+  <p class="muted">“Incasso Virtuale” = (Monete Slot + Monete Cambia + Banconote Cambia + Extra + Acconti) − (Fondi Slot + Fondi Cambia) − Σ(Utile lordo per slot).</p>
+</div></div>
+
+<div class="modal" id="mCreatore"><div class="box">
+  <span class="close" onclick="closeModal('mCreatore')">✖</span>
+  <h2>Info sul creatore</h2>
+  <p>App realizzata da <b>Stephan Winckler</b>, tecnico specializzato 2025.</p>
+</div></div>
+
+<!-- PRINT AREAS -->
+<div id="printGraph" class="print-area"></div>
+<div id="printText" class="print-area"></div>
 
 <script>
-  // ===== Helpers =====
-  const $ = (s)=> document.querySelector(s);
-  const toNum = (v)=> {
-    if (v===null || v===undefined) return 0;
-    return parseFloat(String(v).replace(',','.')) || 0;
-  };
-  const eur = (n)=> new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format((+n||0).toFixed(2));
+/* ===== Helpers ===== */
+const $ = (s)=> document.querySelector(s);
+const toNum = (v)=>{ if(v===null||v===undefined) return 0; return parseFloat(String(v).replace(',','.'))||0; };
+const eur = (n)=> new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format((+n||0).toFixed(2));
+function toggleSidebar(){ $('#sidebar').classList.toggle('active'); }
+function openModal(id){ $('#'+id).classList.add('on'); if(id==='mAnteprima') renderPreview(); if(id==='mStats') renderStats(); }
+function closeModal(id){ $('#'+id).classList.remove('on'); }
 
-  // Elements
-  const nomeLocale=$('#nomeLocale'), dataIncasso=$('#dataIncasso'), note=$('#note'), accontiPeriodo=$('#accontiPeriodo');
-  const qSlot=$('#qSlot'), qChg=$('#qChg'), fondoSlotUnit=$('#fondoSlotUnit'), fondoChgUnit=$('#fondoChgUnit');
-  const preuPerc=$('#preuPerc'), aamsPerc=$('#aamsPerc'), retePerc=$('#retePerc'), percEsercente=$('#percEsercente');
+/* ===== Elements ===== */
+const nomeLocale=$('#nomeLocale'), dataIncasso=$('#dataIncasso'), note=$('#note'), accontiPeriodo=$('#accontiPeriodo');
+const qSlot=$('#qSlot'), qChg=$('#qChg'), fondoSlotUnit=$('#fondoSlotUnit'), fondoChgUnit=$('#fondoChgUnit');
+const preuPerc=$('#preuPerc'), aamsPerc=$('#aamsPerc'), retePerc=$('#retePerc'), percEsercente=$('#percEsercente');
 
-  const tblSlot=$('#tblSlot tbody'), tblChg=$('#tblChg tbody');
-  const sumExtraView=$('#sumExtraView'), altreMonete=$('#altreMonete'), altreBanconote=$('#altreBanconote');
+const subInfo=$('#subInfo'), diffPill=$('#diffPill');
 
-  // Summary fields
-  const totFondiSlot=$('#totFondiSlot'), totFondiChg=$('#totFondiChg'), totFondi=$('#totFondi');
-  const sumMoneteSlot=$('#sumMoneteSlot'), sumMoneteChg=$('#sumMoneteChg'), sumBancChg=$('#sumBancChg');
-  const sumAltre=$('#sumAltre'), sumAcconti=$('#sumAcconti'), sumUtili=$('#sumUtili'), virtualEl=$('#virtual');
+const tblSlotBody = $('#tblSlot tbody');
+const tblChgBody  = $('#tblChg tbody');
 
-  const sumMoneteSlot_f=$('#sumMoneteSlot_f'), sumIn_f=$('#sumIn_f'), sumOut_f=$('#sumOut_f'), sumUtile_f=$('#sumUtile_f');
-  const sumFondoChg_f=$('#sumFondoChg_f'), sumMoneteChg_f=$('#sumMoneteChg_f'), sumBancChg_f=$('#sumBancChg_f');
+/* Riepilogo fields */
+const totFondiSlot=$('#totFondiSlot'), totFondiChg=$('#totFondiChg'), totFondi=$('#totFondi');
+const sumMoneteSlot=$('#sumMoneteSlot'), sumMoneteChg=$('#sumMoneteChg'), sumBancChg=$('#sumBancChg');
+const sumAltre=$('#sumAltre'), sumAcconti=$('#sumAcconti'), sumUtili=$('#sumUtili'), virtualEl=$('#virtual');
+const sumMoneteSlot_f=$('#sumMoneteSlot_f'), sumIn_f=$('#sumIn_f'), sumOut_f=$('#sumOut_f');
+const sumFondoChg_f=$('#sumFondoChg_f'), sumMoneteChg_f=$('#sumMoneteChg_f'), sumBancChg_f=$('#sumBancChg_f');
+const sumInView=$('#sumInView'), sumOutView=$('#sumOutView');
 
-  const bFondiSlot=$('#bFondiSlot'), bFondiChg=$('#bFondiChg'), bFondiTot=$('#bFondiTot');
-  const diffPill=$('#diffPill'), subInfo=$('#subInfo');
+/* Ripartizione fields */
+const rip_PREU=$('#rip_PREU'), rip_AAMS=$('#rip_AAMS'), rip_RETE=$('#rip_RETE'), rip_TASSE=$('#rip_TASSE');
+const rip_NETTO=$('#rip_NETTO'), rip_PERC_ES=$('#rip_PERC_ES'), rip_ES=$('#rip_ES'), rip_GE=$('#rip_GE');
 
-  // Ripartizione fields
-  const rip_IN=$('#rip_IN'), rip_OUT=$('#rip_OUT'), rip_UTILE=$('#rip_UTILE'), rip_TASSE=$('#rip_TASSE');
-  const rip_PREU=$('#rip_PREU'), rip_AAMS=$('#rip_AAMS'), rip_RETE=$('#rip_RETE'), rip_NETTO=$('#rip_NETTO');
-  const rip_PERC_ES=$('#rip_PERC_ES'), rip_ES=$('#rip_ES'), rip_GE=$('#rip_GE');
-
-  const ticketPreviewWrap=$('#ticketPreviewWrap'), ticketPreview=$('#ticketPreview'), ticketPrint=$('#ticketPrint');
-
-  // Buttons
-  $('#applyQuant').addEventListener('click', ()=>{ buildTables(); calc(); persist(); });
-  $('#applyFunds').addEventListener('click', applyFundsToRows);
-  $('#demo').addEventListener('click', demo);
-  $('#save').addEventListener('click', saveJson);
-  $('#load').addEventListener('click', ()=> $('#fileJson').click());
-  $('#fileJson').addEventListener('change', handleJsonFile);
-  $('#reset').addEventListener('click', ()=>{ localStorage.removeItem('iv58_state_v3'); location.reload(); });
-
-  $('#btnPreview').addEventListener('click', ()=>{ ticketPreviewWrap.style.display='block'; renderTicket(ticketPreview); window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'}); });
-  $('#btnPrint').addEventListener('click', ()=>{ renderTicket(ticketPrint); window.print(); });
-
-  nomeLocale.addEventListener('input', updateSub);
-  dataIncasso.addEventListener('input', updateSub);
-  function updateSub(){
-    const d = dataIncasso.value ? new Date(dataIncasso.value+'T00:00:00').toLocaleDateString('it-IT') : '—';
-    subInfo.textContent = `Locale: ${nomeLocale.value||'—'} • Data: ${d}`;
-    persist();
+/* Build tables */
+function buildTables(){
+  // Slot rows
+  tblSlotBody.innerHTML = '';
+  const nS = Math.max(0, parseInt(qSlot.value||0));
+  for(let i=0;i<nS;i++){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="muted">S${i+1}</td>
+      <td><input type="number" step="0.01" value="0" data-k="monete"></td>
+      <td><input type="number" step="0.01" value="0" data-k="in"></td>
+      <td><input type="number" step="0.01" value="0" data-k="out"></td>
+      <td data-k="utile" style="text-align:right">€ 0,00</td>`;
+    tblSlotBody.appendChild(tr);
   }
-
-  // ===== Build dynamic tables =====
-  function buildTables(){
-    // Slots
-    const nS = Math.max(0, parseInt(qSlot.value||0));
-    tblSlot.innerHTML = '';
-    for(let i=0;i<nS;i++){
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="muted">S${i+1}</td>
-        <td><input type="number" step="0.01" min="0" value="0" data-k="monete"></td>
-        <td><input type="number" step="0.01" min="0" value="0" data-k="in"></td>
-        <td><input type="number" step="0.01" min="0" value="0" data-k="out"></td>
-        <td style="text-align:right" data-k="utile">€ 0,00</td>
-      `;
-      tblSlot.appendChild(tr);
-    }
-    // Cambiamonete
-    const nC = Math.max(0, parseInt(qChg.value||0));
-    tblChg.innerHTML = '';
-    for(let i=0;i<nC;i++){
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="muted">C${i+1}</td>
-        <td><input type="number" step="0.01" min="0" value="${fondoChgUnit.value||0}" data-k="fondo"></td>
-        <td><input type="number" step="0.01" min="0" value="0" data-k="monete"></td>
-        <td><input type="number" step="0.01" min="0" value="0" data-k="banconote"></td>
-      `;
-      tblChg.appendChild(tr);
-    }
-    // Attach listeners
-    document.querySelectorAll('input').forEach(inp=>{
-      inp.addEventListener('input', ()=>{ calc(); persist(); });
-    });
+  // Changer rows
+  tblChgBody.innerHTML = '';
+  const nC = Math.max(0, parseInt(qChg.value||0));
+  for(let i=0;i<nC;i++){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="muted">C${i+1}</td>
+      <td><input type="number" step="0.01" value="${fondoChgUnit.value||0}" data-k="fondo"></td>
+      <td><input type="number" step="0.01" value="0" data-k="monete"></td>
+      <td><input type="number" step="0.01" value="0" data-k="banconote"></td>`;
+    tblChgBody.appendChild(tr);
   }
+  bindInputs();
+  calc();
+}
+function bindInputs(){
+  document.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input',()=>{ updateSub(); calc(); });
+  });
+}
+function updateSub(){
+  const d = dataIncasso.value ? new Date(dataIncasso.value+'T00:00:00').toLocaleDateString('it-IT') : '—';
+  subInfo.textContent = `Locale: ${nomeLocale.value||'—'} • Data: ${d}`;
+}
 
-  function applyFundsToRows(){
-    const unitChg = toNum(fondoChgUnit.value);
-    tblChg.querySelectorAll('tr').forEach(tr=>{
-      const f = tr.querySelector('input[data-k="fondo"]');
-      if(f) f.value = unitChg.toFixed(2);
-    });
-    calc(); persist();
+/* Core calc */
+function calc(){
+  // Sum Slots
+  const rowsS = [...tblSlotBody.querySelectorAll('tr')];
+  let sMon=0,sIn=0,sOut=0,sUtile=0;
+  rowsS.forEach(r=>{
+    const vM=toNum(r.querySelector('input[data-k="monete"]').value);
+    const vI=toNum(r.querySelector('input[data-k="in"]').value);
+    const vO=toNum(r.querySelector('input[data-k="out"]').value);
+    const u=vI-vO;
+    r.querySelector('[data-k="utile"]').textContent = eur(u);
+    sMon+=vM; sIn+=vI; sOut+=vO; sUtile+=u;
+  });
+
+  // Sum Changers
+  const rowsC = [...tblChgBody.querySelectorAll('tr')];
+  let fC=0,mC=0,bC=0;
+  rowsC.forEach(r=>{
+    fC+=toNum(r.querySelector('input[data-k="fondo"]').value);
+    mC+=toNum(r.querySelector('input[data-k="monete"]').value);
+    bC+=toNum(r.querySelector('input[data-k="banconote"]').value);
+  });
+
+  // Extra
+  const altM=toNum($('#altreMonete')?.value||0);
+  const altB=toNum($('#altreBanconote')?.value||0);
+  const acc =toNum(accontiPeriodo.value);
+  $('#sumExtraView').value = eur(altM+altB);
+
+  // Fondi
+  const totFondoS = toNum(fondoSlotUnit.value) * Math.max(0, parseInt(qSlot.value||0));
+  const totFondiAll = totFondoS + fC;
+
+  // Controllo virtuale
+  const sommaValori = sMon + mC + bC + altM + altB + acc;
+  const incassoVirtuale = sommaValori - totFondiAll - sUtile;
+
+  // Update summaries
+  sumMoneteSlot_f.textContent = eur(sMon);
+  sumIn_f.textContent         = eur(sIn);
+  sumOut_f.textContent        = eur(sOut);
+  $('#sumUtile_f').textContent= eur(sUtile);
+  sumFondoChg_f.textContent   = eur(fC);
+  sumMoneteChg_f.textContent  = eur(mC);
+  sumBancChg_f.textContent    = eur(bC);
+
+  totFondiSlot.textContent = eur(totFondoS);
+  totFondiChg.textContent  = eur(fC);
+  totFondi.textContent     = eur(totFondiAll);
+  sumMoneteSlot.textContent= eur(sMon);
+  sumMoneteChg.textContent = eur(mC);
+  sumBancChg.textContent   = eur(bC);
+  sumAltre.textContent     = eur(altM + altB);
+  sumAcconti.textContent   = eur(acc);
+  sumUtili.textContent     = eur(sUtile);
+  sumInView.textContent    = eur(sIn);
+  sumOutView.textContent   = eur(sOut);
+  virtualEl.textContent    = eur(incassoVirtuale);
+
+  // Pill
+  diffPill.className = 'pill ' + (incassoVirtuale>0?'pos':(incassoVirtuale<0?'neg':'neu'));
+  diffPill.textContent = Math.abs(incassoVirtuale)<0.005 ? 'OK — Zero' : (incassoVirtuale>0 ? 'Crescono '+eur(incassoVirtuale) : 'Mancano '+eur(incassoVirtuale));
+
+  // Ripartizione su IN
+  const preu = sIn * toNum(preuPerc.value)/100;
+  const aams = sIn * toNum(aamsPerc.value)/100;
+  const rete = sIn * toNum(retePerc.value)/100;
+  const tasse= preu + aams + rete;
+  const netto = (sIn - sOut) - tasse;
+  const pEs = Math.max(0,Math.min(100,toNum(percEsercente.value)));
+  const qEs = netto * pEs/100;
+  const qGe = netto - qEs;
+
+  rip_PREU.textContent  = eur(preu);
+  rip_AAMS.textContent  = eur(aams);
+  rip_RETE.textContent  = eur(rete);
+  rip_TASSE.textContent = eur(tasse);
+  rip_NETTO.textContent = eur(netto);
+  rip_PERC_ES.textContent = pEs.toFixed(1)+' %';
+  rip_ES.textContent    = eur(qEs);
+  rip_GE.textContent    = eur(qGe);
+
+  // cache for previews/stats
+  window._calc = {rowsS,rowsC,sMon,sIn,sOut,sUtile,fC,mC,bC,altM,altB,acc,totFondoS,totFondiAll,sommaValori,incassoVirtuale,preu,aams,rete,tasse,netto,pEs,qEs,qGe};
+}
+
+/* Demo data */
+function demo(){
+  qSlot.value=5; qChg.value=2; fondoSlotUnit.value=150; fondoChgUnit.value=1000;
+  buildTables();
+  const s = [
+    {m:320,in:2100,out:1950},{m:280,in:1900,out:1800},{m:410,in:2600,out:2605},
+    {m:150,in:1100,out:1000},{m:520,in:2900,out:2750}
+  ];
+  [...tblSlotBody.querySelectorAll('tr')].forEach((r,i)=>{ const v=s[i]; if(!v) return;
+    r.querySelector('input[data-k="monete"]').value=v.m;
+    r.querySelector('input[data-k="in"]').value=v.in;
+    r.querySelector('input[data-k="out"]').value=v.out;
+  });
+  const c=[{f:1000,mon:800,ban:1200},{f:1000,mon:600,ban:900}];
+  [...tblChgBody.querySelectorAll('tr')].forEach((r,i)=>{ const v=c[i]; if(!v) return;
+    r.querySelector('input[data-k="fondo"]').value=v.f;
+    r.querySelector('input[data-k="monete"]').value=v.mon;
+    r.querySelector('input[data-k="banconote"]').value=v.ban;
+  });
+  $('#altreMonete').value=50; $('#altreBanconote').value=100; accontiPeriodo.value=500;
+  preuPerc.value=24; aamsPerc.value=0.8; retePerc.value=1; percEsercente.value=50;
+  calc();
+}
+
+/* ===== Anteprima (modal topbar + menu voce) ===== */
+$('#btnPreview').addEventListener('click', ()=> openModal('mAnteprima'));
+$('#btnPrint').addEventListener('click', printTicket);
+
+function currentMode(){ return document.querySelector('input[name="mode"]:checked').value; }
+
+function renderPreview(){
+  const area = $('#previewArea');
+  const mode = currentMode();
+  if(mode==='grafico'){
+    area.innerHTML = buildGraphicalTicketHTML();
+  } else {
+    area.innerHTML = `<pre class="ticket-text">${buildTextTicket()}</pre>`;
   }
+}
 
-  // ===== Core calculation =====
-  function calc(){
-    // Slot sums
-    const slotRows = [...tblSlot.querySelectorAll('tr')];
-    let sMon=0, sIn=0, sOut=0, sUtile=0;
-    slotRows.forEach(r=>{
-      const vM = toNum(r.querySelector('input[data-k="monete"]').value);
-      const vI = toNum(r.querySelector('input[data-k="in"]').value);
-      const vO = toNum(r.querySelector('input[data-k="out"]').value);
-      const u = vI - vO;
-      r.querySelector('[data-k="utile"]').textContent = eur(u);
-      sMon += vM; sIn += vI; sOut += vO; sUtile += u;
-    });
+/* ===== Ticket grafico ===== */
+function buildGraphicalTicketHTML(){
+  const C = window._calc||calc()||window._calc;
+  const d = dataIncasso.value ? new Date(dataIncasso.value+'T00:00:00').toLocaleDateString('it-IT') : new Date().toLocaleDateString('it-IT');
+  // Per-slot details
+  const slotHtml = C.rowsS.map((r,i)=>{
+    const M = eur(toNum(r.querySelector('input[data-k="monete"]').value));
+    const I = eur(toNum(r.querySelector('input[data-k="in"]').value));
+    const O = eur(toNum(r.querySelector('input[data-k="out"]').value));
+    const U = r.querySelector('[data-k="utile"]').textContent;
+    return `
+      <div class="t-row"><span>S${i+1} Monete</span><b>${M}</b></div>
+      <div class="t-row"><span>IN / OUT</span><b>${I} / ${O}</b></div>
+      <div class="t-row"><span>Utile</span><b>${U}</b></div>`;
+  }).join('');
+  const chgHtml = C.rowsC.map((r,i)=>{
+    const F = eur(toNum(r.querySelector('input[data-k="fondo"]').value));
+    const M = eur(toNum(r.querySelector('input[data-k="monete"]').value));
+    const B = eur(toNum(r.querySelector('input[data-k="banconote"]').value));
+    return `
+      <div class="t-row"><span>C${i+1} Fondo</span><b>${F}</b></div>
+      <div class="t-row"><span>Monete / Banconote</span><b>${M} / ${B}</b></div>`;
+  }).join('');
 
-    // Cambiamonete sums
-    const chgRows = [...tblChg.querySelectorAll('tr')];
-    let sumFondoC=0, sumMonC=0, sumBanC=0;
-    chgRows.forEach(r=>{
-      sumFondoC += toNum(r.querySelector('input[data-k="fondo"]').value);
-      sumMonC   += toNum(r.querySelector('input[data-k="monete"]').value);
-      sumBanC   += toNum(r.querySelector('input[data-k="banconote"]').value);
-    });
+  const pill = diffPill.textContent;
 
-    // Extra
-    const altM = toNum(altreMonete.value);
-    const altB = toNum(altreBanconote.value);
-    const acc  = toNum(accontiPeriodo.value);
-    sumExtraView.value = eur(altM + altB);
+  return `
+  <div class="ticket">
+    <div class="t-head">
+      <div class="title">${(nomeLocale.value||'INCASSO VIRTUALE').toUpperCase()}</div>
+      <div class="sub">Data: ${d}</div>
+    </div>
 
-    // Fondi
-    const totFondoS = toNum(fondoSlotUnit.value) * Math.max(0, parseInt(qSlot.value||0));
-    const totFondiAll = totFondoS + sumFondoC;
+    <div class="t-sec">
+      <h4>Slot</h4>
+      ${slotHtml || `<div class="t-row"><span>—</span><b>€ 0,00</b></div>`}
+      <div class="t-row"><span><b>Somma monete</b></span><b>${eur(C.sMon)}</b></div>
+    </div>
 
-    // Disponibilità fisica + acconti
-    const sommaValori = sMon + sumMonC + sumBanC + altM + altB + acc;
+    <div class="t-sec">
+      <h4>Cambiamonete</h4>
+      ${chgHtml || `<div class="t-row"><span>—</span><b>€ 0,00</b></div>`}
+      <div class="t-row"><span><b>Fondi cambia</b></span><b>${eur(C.fC)}</b></div>
+      <div class="t-row"><span><b>Monete cambia</b></span><b>${eur(C.mC)}</b></div>
+      <div class="t-row"><span><b>Banconote cambia</b></span><b>${eur(C.bC)}</b></div>
+    </div>
 
-    // Incasso Virtuale
-    const incassoVirtuale = sommaValori - totFondiAll - sUtile;
+    <div class="t-sec">
+      <h4>Extra</h4>
+      <div class="t-row"><span>Altre monete + banconote</span><b>${eur(C.altM + C.altB)}</b></div>
+      <div class="t-row"><span>Acconti periodo</span><b>${eur(C.acc)}</b></div>
+    </div>
 
-    // ===== Riepilogo UI =====
-    sumMoneteSlot_f.textContent = eur(sMon);
-    sumIn_f.textContent         = eur(sIn);
-    sumOut_f.textContent        = eur(sOut);
-    sumUtile_f.textContent      = eur(sUtile);
+    <div class="t-sec">
+      <h4>Ripartizione</h4>
+      <div class="t-row"><span>Totale IN</span><b>${eur(C.sIn)}</b></div>
+      <div class="t-row"><span>Totale OUT</span><b>${eur(C.sOut)}</b></div>
+      <div class="t-row"><span>Utile lordo</span><b>${eur(C.sUtile)}</b></div>
+      <div class="t-row"><span>PREU</span><b>${eur(C.preu)}</b></div>
+      <div class="t-row"><span>AAMS</span><b>${eur(C.aams)}</b></div>
+      <div class="t-row"><span>Rete</span><b>${eur(C.rete)}</b></div>
+      <div class="t-row"><span><b>Tasse totali</b></span><b><b>${eur(C.tasse)}</b></div>
+      <div class="t-row"><span><b>Netto da ripartire</b></span><b><b>${eur(C.netto)}</b></div>
+      <div class="t-row"><span>% Esercente</span><b>${C.pEs?.toFixed(1)||toNum(percEsercente.value).toFixed(1)} %</b></div>
+      <div class="t-row"><span><b>Verso Esercente</b></span><b><b>${eur(C.qEs)}</b></div>
+      <div class="t-row"><span>Verso Gestore</span><b>${eur(C.qGe)}</b></div>
+    </div>
 
-    sumFondoChg_f.textContent   = eur(sumFondoC);
-    sumMoneteChg_f.textContent  = eur(sumMonC);
-    sumBancChg_f.textContent    = eur(sumBanC);
+    <div class="t-sec">
+      <h4>Controllo Virtuale</h4>
+      <div class="t-row"><span>Σ Fondi</span><b>${eur(C.totFondiAll)}</b></div>
+      <div class="t-row"><span>Σ(IN−OUT)</span><b>${eur(C.sUtile)}</b></div>
+      <div class="t-row"><span><b>Incasso Virtuale</b></span><b><b>${eur(C.incassoVirtuale)}</b></div>
+      <div class="t-emph">${pill}</div>
+      ${note.value?`<div class="t-foot"><b>Note:</b> ${note.value}</div>`:''}
+    </div>
+  </div>`;
+}
 
-    totFondiSlot.textContent = eur(totFondoS);
-    totFondiChg.textContent  = eur(sumFondoC);
-    totFondi.textContent     = eur(totFondiAll);
+/* ===== Scontrino testo 32 colonne ===== */
+const W=32;
+const rule = (c='-')=> c.repeat(W);
+const padR=(s,n)=> (s+ ' '.repeat(Math.max(0,n-s.length))).slice(0,n);
+const padL=(s,n)=> (' '.repeat(Math.max(0,n-s.length))+s).slice(-n);
+const lr=(l,r)=> padR(l, W - String(r).length) + r;
+function buildTextTicket(){
+  const C = window._calc||calc()||window._calc;
+  const head = (nomeLocale.value||'INCASSO VIRTUALE').toUpperCase();
+  const d = dataIncasso.value ? new Date(dataIncasso.value+'T00:00:00').toLocaleDateString('it-IT') : new Date().toLocaleDateString('it-IT');
+  const lines=[];
+  lines.push(padR(head,W));
+  lines.push(padR('DATA: '+d,W));
+  lines.push(rule('='));
+  lines.push('SLOT');
+  lines.push(rule());
+  C.rowsS.forEach((r,i)=>{
+    const M=toNum(r.querySelector('input[data-k="monete"]').value);
+    const I=toNum(r.querySelector('input[data-k="in"]').value);
+    const O=toNum(r.querySelector('input[data-k="out"]').value);
+    const U=I-O;
+    lines.push(lr(`S${i+1} MON`, (M).toFixed(2)));
+    lines.push(lr('   IN/OUT', `${I.toFixed(2)}/${O.toFixed(2)}`));
+    lines.push(lr('   UTILE', U.toFixed(2)));
+  });
+  lines.push(rule());
+  lines.push(lr('MONETE SLOT', (C.sMon).toFixed(2)));
+  lines.push(lr('IN SLOT', (C.sIn).toFixed(2)));
+  lines.push(lr('OUT SLOT', (C.sOut).toFixed(2)));
+  lines.push(lr('UTILE LORDO', (C.sUtile).toFixed(2)));
+  lines.push('');
+  lines.push('CAMBIAMONETE');
+  lines.push(rule());
+  C.rowsC.forEach((r,i)=>{
+    const F=toNum(r.querySelector('input[data-k="fondo"]').value);
+    const M=toNum(r.querySelector('input[data-k="monete"]').value);
+    const B=toNum(r.querySelector('input[data-k="banconote"]').value);
+    lines.push(lr(`C${i+1} FONDO`, F.toFixed(2)));
+    lines.push(lr('   MON/BAN', `${M.toFixed(2)}/${B.toFixed(2)}`));
+  });
+  lines.push(rule());
+  lines.push(lr('FONDI SLOT', (C.totFondoS).toFixed(2)));
+  lines.push(lr('FONDI CAMBIA', (C.fC).toFixed(2)));
+  lines.push(lr('Σ FONDI', (C.totFondiAll).toFixed(2)));
+  lines.push('');
+  lines.push('EXTRA');
+  lines.push(rule());
+  lines.push(lr('ALTRE MONETE', (C.altM).toFixed(2)));
+  lines.push(lr('ALTRE BANCON', (C.altB).toFixed(2)));
+  lines.push(lr('ACCONTI', (C.acc).toFixed(2)));
+  lines.push('');
+  lines.push('RIPARTIZIONE');
+  lines.push(rule());
+  lines.push(lr('Σ IN', (C.sIn).toFixed(2)));
+  lines.push(lr('Σ OUT', (C.sOut).toFixed(2)));
+  lines.push(lr('UTILE', (C.sUtile).toFixed(2)));
+  lines.push(lr('PREU', (C.preu).toFixed(2)));
+  lines.push(lr('AAMS', (C.aams).toFixed(2)));
+  lines.push(lr('RETE', (C.rete).toFixed(2)));
+  lines.push(lr('TASSE', (C.tasse).toFixed(2)));
+  lines.push(lr('NETTO', (C.netto).toFixed(2)));
+  lines.push(lr('% ESERC.', (C.pEs??toNum(percEsercente.value)).toFixed(1)));
+  lines.push(lr('ESERCENTE', (C.qEs).toFixed(2)));
+  lines.push(lr('GESTORE', (C.qGe).toFixed(2)));
+  lines.push('');
+  lines.push('CONTROLLO VIRT.');
+  lines.push(rule());
+  lines.push(lr('INCASSO VIRT.', (C.incassoVirtuale).toFixed(2)));
+  const label = Math.abs(C.incassoVirtuale)<0.005 ? 'OK ZERO' : (C.incassoVirtuale>0?'CRESCONO':'MANCANO');
+  lines.push(lr(label, (C.incassoVirtuale).toFixed(2)));
+  if(note.value){ lines.push(''); lines.push('NOTE:'); lines.push(padR(note.value,W)); }
+  lines.push(''); lines.push('Operatore: _____________');
+  return lines.join('\n');
+}
 
-    sumMoneteSlot.textContent = eur(sMon);
-    sumMoneteChg.textContent  = eur(sumMonC);
-    sumBancChg.textContent    = eur(sumBanC);
-    sumAltre.textContent      = eur(altM + altB);
-    sumAcconti.textContent    = eur(acc);
-    sumUtili.textContent      = eur(sUtile);
-    virtualEl.textContent     = eur(incassoVirtuale);
-
-    bFondiSlot.textContent = eur(totFondoS);
-    bFondiChg.textContent  = eur(sumFondoC);
-    bFondiTot.textContent  = eur(totFondoS + sumFondoC);
-
-    diffPill.className = 'pill ' + (incassoVirtuale>0 ? 'pos' : (incassoVirtuale<0 ? 'neg' : 'neu'));
-    diffPill.textContent =
-      Math.abs(incassoVirtuale) < 0.005 ? 'OK — Zero' :
-      (incassoVirtuale>0 ? 'Crescono ' + eur(incassoVirtuale) : 'Mancano ' + eur(incassoVirtuale));
-
-    // ===== Ripartizione =====
-    // Aliquote su IN
-    const preu = sIn * toNum(preuPerc.value) / 100;
-    const aams = sIn * toNum(aamsPerc.value) / 100;
-    const rete = sIn * toNum(retePerc.value) / 100;
-    const tasseTot = preu + aams + rete;
-
-    const netto = (sIn - sOut) - tasseTot;
-    const pEs = Math.max(0, Math.min(100, toNum(percEsercente.value)));
-    const quotaEs = netto * pEs / 100;
-    const quotaGe = netto - quotaEs;
-
-    // Aggiorna campi ripartizione
-    rip_IN.value    = eur(sIn);
-    rip_OUT.value   = eur(sOut);
-    rip_UTILE.value = eur(sIn - sOut);
-    rip_PREU.value  = eur(preu);
-    rip_AAMS.value  = eur(aams);
-    rip_RETE.value  = eur(rete);
-    rip_TASSE.value = eur(tasseTot);
-    rip_NETTO.value = eur(nett o);
-    rip_PERC_ES.value = pEs.toFixed(1) + ' %';
-    rip_ES.value    = eur(quotaEs);
-    rip_GE.value    = eur(quotaGe);
+/* ===== Stampa ===== */
+function printTicket(){
+  const mode = currentMode();
+  const g = $('#printGraph'), t = $('#printText');
+  g.classList.remove('active'); t.classList.remove('active');
+  if(mode==='grafico'){
+    g.innerHTML = buildGraphicalTicketHTML();
+    g.classList.add('active');
+  }else{
+    t.innerHTML = `<pre class="ticket-text">${buildTextTicket()}</pre>`;
+    t.classList.add('active');
   }
+  window.print();
+}
 
-  // ===== Ticket (58mm) =====
-  function renderTicket(container){
-    const D = (dataIncasso.value ? new Date(dataIncasso.value+'T00:00:00') : new Date()).toLocaleDateString('it-IT');
+/* ===== Statistiche (grafici + numeri) ===== */
+let chartInOut, chartRip, chartPayout;
+function renderStats(){
+  const C = window._calc||calc()||window._calc;
+  // Numeri
+  const payoutAvg = C.sIn>0 ? (C.sOut/C.sIn*100) : 0;
+  $('#statsText').innerHTML =
+    `IN: <b>${eur(C.sIn)}</b> • OUT: <b>${eur(C.sOut)}</b> • Utile: <b>${eur(C.sUtile)}</b> • `+
+    `Tasse: <b>${eur(C.tasse)}</b> • Netto: <b>${eur(C.netto)}</b> • `+
+    `Esercente: <b>${eur(C.qEs)}</b> • Gestore: <b>${eur(C.qGe)}</b> • `+
+    `Payout medio: <b>${payoutAvg.toFixed(2)}%</b>`;
 
-    // Rileggi i totali dalla UI
-    const v = {
-      monSlot:   sumMoneteSlot.textContent,
-      monChg:    sumMoneteChg.textContent,
-      banChg:    sumBancChg.textContent,
-      fondiSlot: totFondiSlot.textContent,
-      fondiChg:  totFondiChg.textContent,
-      fondiTot:  totFondi.textContent,
-      extra:     sumAltre.textContent,
-      acconti:   sumAcconti.textContent,
-      utili:     sumUtili.textContent,
-      incasso:   virtualEl.textContent,
-      pill:      diffPill.textContent,
+  // Dataset per slot
+  const labelsS = C.rowsS.map((_,i)=>'S'+(i+1));
+  const dataIn  = C.rowsS.map(r=>toNum(r.querySelector('input[data-k="in"]').value));
+  const dataOut = C.rowsS.map(r=>toNum(r.querySelector('input[data-k="out"]').value));
+  const payoutPerSlot = C.rowsS.map((r,i)=>{
+    const iN = dataIn[i]; const o = dataOut[i];
+    return iN>0 ? (o/iN*100) : 0;
+  });
 
-      IN:   rip_IN.value, OUT: rip_OUT.value,
-      UT:   rip_UTILE.value, TASSE: rip_TASSE.value,
-      PREU: rip_PREU.value, AAMS: rip_AAMS.value, RETE: rip_RETE.value,
-      NETTO: rip_NETTO.value, PERC: rip_PERC_ES.value,
-      ES: rip_ES.value, GE: rip_GE.value
-    };
+  const hasCharts = typeof Chart!=='undefined';
+  $('#statsFallback').style.display = hasCharts ? 'none' : 'block';
+  if(!hasCharts) return;
 
-    const slotRows = [...tblSlot.querySelectorAll('tr')].map((r,i)=>{
-      const M = eur(toNum(r.querySelector('input[data-k="monete"]').value));
-      const I = eur(toNum(r.querySelector('input[data-k="in"]').value));
-      const O = eur(toNum(r.querySelector('input[data-k="out"]').value));
-      const U = r.querySelector('[data-k="utile"]').textContent;
-      return `
-        <div class="t-row"><span>S${i+1} Monete</span><b>${M}</b></div>
-        <div class="t-row"><span>IN / OUT</span><b>${I} / ${O}</b></div>
-        <div class="t-row"><span>Utile</span><b>${U}</b></div>
-      `;
-    }).join('');
+  if(chartInOut) chartInOut.destroy();
+  if(chartRip) chartRip.destroy();
+  if(chartPayout) chartPayout.destroy();
 
-    const chgRows = [...tblChg.querySelectorAll('tr')].map((r,i)=>{
-      const F = eur(toNum(r.querySelector('input[data-k="fondo"]').value));
-      const M = eur(toNum(r.querySelector('input[data-k="monete"]').value));
-      const B = eur(toNum(r.querySelector('input[data-k="banconote"]').value));
-      return `
-        <div class="t-row"><span>C${i+1} Fondo</span><b>${F}</b></div>
-        <div class="t-row"><span>Monete / Banconote</span><b>${M} / ${B}</b></div>
-      `;
-    }).join('');
+  chartInOut = new Chart($('#chartInOut').getContext('2d'), {
+    type:'bar',
+    data:{labels:labelsS,datasets:[
+      {label:'IN',data:dataIn},
+      {label:'OUT',data:dataOut}
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'top'},title:{display:true,text:'IN/OUT per Slot'}}}
+  });
 
-    const noteHtml = note.value ? `<div class="t-note"><b>Note:</b> ${note.value}</div>` : '';
+  chartRip = new Chart($('#chartRip').getContext('2d'), {
+    type:'pie',
+    data:{labels:['PREU','AAMS','Rete','Esercente','Gestore'],
+      datasets:[{data:[C.preu,C.aams,C.rete,C.qEs,C.qGe]}]},
+    options:{plugins:{title:{display:true,text:'Ripartizione dell’utile lordo'}}}
+  });
 
-    const html = `
-      <div class="t-head">
-        <div class="title">${(nomeLocale.value || 'INCASSO VIRTUALE').toUpperCase()}</div>
-        <div class="sub">Data: ${D}</div>
-      </div>
+  chartPayout = new Chart($('#chartPayout').getContext('2d'),{
+    type:'bar',
+    data:{labels:labelsS,datasets:[{label:'Payout %',data:payoutPerSlot}]},
+    options:{plugins:{title:{display:true,text:'Payout per Slot'}},
+      scales:{y:{ticks:{callback:(v)=>v+'%'}}}}
+  });
+}
 
-      <div class="t-sec">
-        <h4>Slot</h4>
-        ${slotRows || `<div class="t-row"><span>—</span><b>€ 0,00</b></div>`}
-        <div class="t-row"><span><b>Somma monete</b></span><b>${v.monSlot}</b></div>
-      </div>
-
-      <div class="t-sec">
-        <h4>Cambiamonete</h4>
-        ${chgRows || `<div class="t-row"><span>—</span><b>€ 0,00</b></div>`}
-        <div class="t-row"><span><b>Fondi cambia</b></span><b>${v.fondiChg}</b></div>
-        <div class="t-row"><span><b>Monete cambia</b></span><b>${v.monChg}</b></div>
-        <div class="t-row"><span><b>Banconote cambia</b></span><b>${v.banChg}</b></div>
-      </div>
-
-      <div class="t-sec">
-        <h4>Extra</h4>
-        <div class="t-row"><span>Altre monete + banconote</span><b>${v.extra}</b></div>
-        <div class="t-row"><span>Acconti periodo</span><b>${v.acconti}</b></div>
-      </div>
-
-      <div class="t-sec">
-        <h4>Ripartizione</h4>
-        <div class="t-row"><span>Totale IN</span><b>${v.IN}</b></div>
-        <div class="t-row"><span>Totale OUT</span><b>${v.OUT}</b></div>
-        <div class="t-row"><span>Utile lordo</span><b>${v.UT}</b></div>
-        <div class="t-row"><span>PREU</span><b>${v.PREU}</b></div>
-        <div class="t-row"><span>AAMS</span><b>${v.AAMS}</b></div>
-        <div class="t-row"><span>Rete</span><b>${v.RETE}</b></div>
-        <div class="t-row"><span><b>Tasse totali</b></span><b><b>${v.TASSE}</b></div>
-        <div class="t-row"><span><b>Netto da ripartire</b></span><b><b>${v.NETTO}</b></div>
-        <div class="t-row"><span>% Esercente</span><b>${v.PERC}</b></div>
-        <div class="t-row"><span><b>Verso Esercente</b></span><b><b>${v.ES}</b></div>
-        <div class="t-row"><span>Verso Gestore</span><b>${v.GE}</b></div>
-      </div>
-
-      <div class="t-sec">
-        <h4>Controllo Virtuale</h4>
-        <div class="t-row"><span>Σ Fondi</span><b>${v.fondiTot}</b></div>
-        <div class="t-row"><span>Σ(IN−OUT)</span><b>${v.utili}</b></div>
-        <div class="t-row"><span><b>Incasso Virtuale</b></span><b><b>${v.incasso}</b></div>
-        <div class="t-emph">${v.pill}</div>
-        ${noteHtml}
-        <div class="t-foot">Operatore: ______________________</div>
-      </div>
-    `;
-
-    container.innerHTML = `<div class="ticket-preview">${html}</div>`;
-    if (container === ticketPrint){
-      container.innerHTML = `<div class="ticket-preview" style="border:0; box-shadow:none">${html}</div>`;
-    }
-  }
-
-  // ===== Persistence (LocalStorage + JSON) =====
-  function capture(){
-    const slots=[...tblSlot.querySelectorAll('tr')].map(r=>({
-      monete: toNum(r.querySelector('input[data-k="monete"]').value),
-      in:     toNum(r.querySelector('input[data-k="in"]').value),
-      out:    toNum(r.querySelector('input[data-k="out"]').value)
-    }));
-    const chg=[...tblChg.querySelectorAll('tr')].map(r=>({
-      fondo:     toNum(r.querySelector('input[data-k="fondo"]').value),
-      monete:    toNum(r.querySelector('input[data-k="monete"]').value),
-      banconote: toNum(r.querySelector('input[data-k="banconote"]').value)
-    }));
-    return {
-      meta:{locale:nomeLocale.value||'', data:dataIncasso.value||'', note:note.value||''},
-      qSlot: toNum(qSlot.value), qChg: toNum(qChg.value),
-      fondoSlotUnit: toNum(fondoSlotUnit.value), fondoChgUnit: toNum(fondoChgUnit.value),
-      preu: toNum(preuPerc.value), aams: toNum(aamsPerc.value), rete: toNum(retePerc.value),
-      percEs: toNum(percEsercente.value),
-      slots, chg,
-      altreMonete: toNum(altreMonete.value), altreBanconote: toNum(altreBanconote.value),
-      accontiPeriodo: toNum(accontiPeriodo.value)
-    };
-  }
-  function apply(state){
-    qSlot.value = state.qSlot||0; qChg.value = state.qChg||0;
-    fondoSlotUnit.value = state.fondoSlotUnit||0; fondoChgUnit.value = state.fondoChgUnit||0;
-    preuPerc.value = state.preu ?? 24; aamsPerc.value = state.aams ?? 0.8; retePerc.value = state.rete ?? 1;
-    percEsercente.value = state.percEs ?? 50;
-    buildTables();
-    const sR=[...tblSlot.querySelectorAll('tr')];
-    (state.slots||[]).forEach((v,i)=>{ if(!sR[i]) return;
-      sR[i].querySelector('input[data-k="monete"]').value=v.monete||0;
-      sR[i].querySelector('input[data-k="in"]').value=v.in||0;
-      sR[i].querySelector('input[data-k="out"]').value=v.out||0;
-    });
-    const cR=[...tblChg.querySelectorAll('tr')];
-    (state.chg||[]).forEach((v,i)=>{ if(!cR[i]) return;
-      cR[i].querySelector('input[data-k="fondo"]').value=v.fondo||0;
-      cR[i].querySelector('input[data-k="monete"]').value=v.monete||0;
-      cR[i].querySelector('input[data-k="banconote"]').value=v.banconote||0;
-    });
-    altreMonete.value=state.altreMonete||0; altreBanconote.value=state.altreBanconote||0; accontiPeriodo.value=state.accontiPeriodo||0;
-    nomeLocale.value=state.meta?.locale||''; dataIncasso.value=state.meta?.data||''; note.value=state.meta?.note||'';
-    updateSub(); calc();
-  }
-  function persist(){ localStorage.setItem('iv58_state_v3', JSON.stringify(capture())); }
-  function restore(){ const raw=localStorage.getItem('iv58_state_v3'); if(raw){ try{ apply(JSON.parse(raw)); return true; }catch{} } return false; }
-  function saveJson(){
-    const blob=new Blob([JSON.stringify(capture(),null,2)], {type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='incasso-virtuale-58mm.json'; a.click(); URL.revokeObjectURL(url);
-  }
-  function handleJsonFile(e){
-    const f=e.target.files[0]; if(!f) return;
-    const r=new FileReader();
-    r.onload = ev=>{ try{ apply(JSON.parse(ev.target.result)); }catch{ alert('JSON non valido'); } };
-    r.readAsText(f); e.target.value='';
-  }
-
-  // ===== Demo =====
-  function demo(){
-    qSlot.value=5; qChg.value=2; fondoSlotUnit.value=150; fondoChgUnit.value=1000;
-    preuPerc.value=24; aamsPerc.value=0.8; retePerc.value=1; percEsercente.value=50;
-    buildTables();
-    const s=[{m:320,in:2100,out:1950},{m:280,in:1900,out:1800},{m:410,in:2600,out:2605},{m:150,in:1100,out:1000},{m:520,in:2900,out:2750}];
-    [...tblSlot.querySelectorAll('tr')].forEach((r,i)=>{ const v=s[i]; if(!v) return;
-      r.querySelector('input[data-k="monete"]').value=v.m;
-      r.querySelector('input[data-k="in"]').value=v.in;
-      r.querySelector('input[data-k="out"]').value=v.out;
-    });
-    const c=[{f:1000,mon:800,ban:1200},{f:1000,mon:600,ban:900}];
-    [...tblChg.querySelectorAll('tr')].forEach((r,i)=>{ const v=c[i]; if(!v) return;
-      r.querySelector('input[data-k="fondo"]').value=v.f;
-      r.querySelector('input[data-k="monete"]').value=v.mon;
-      r.querySelector('input[data-k="banconote"]').value=v.ban;
-    });
-    altreMonete.value=50; altreBanconote.value=100; accontiPeriodo.value=500;
-    calc(); persist();
-    ticketPreviewWrap.style.display='block'; renderTicket(ticketPreview);
-  }
-
-  // ===== Init =====
-  (function init(){
-    if(!restore()){ buildTables(); calc(); }
-    updateSub();
-  })();
+/* ===== Init ===== */
+buildTables(); // prebuild
+updateSub();
+document.addEventListener('input', (e)=>{
+  if(e.target && e.target.tagName==='INPUT') calc();
+});
 </script>
 </body>
 </html>
