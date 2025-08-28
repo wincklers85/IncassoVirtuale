@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Incasso Virtuale AWP — Crema/Grigio</title>
+<style>
+  /* ===== Palette crema/grigio ispirata alle foto ===== */
+  :root{
+    --bg:#f5f3ee;          /* crema chiaro */
+    --panel:#ece9e2;       /* crema/grigio pannelli */
+    --panel2:#e2dfd8;
+    --ink:#2a2a2a;         /* testo principale */
+    --muted:#666666;
+    --line:#d4d1ca;
+    --focus:#2b6cb0;       /* blu per focus/bordi */
+    --good:#1f8f37;        /* verde salvataggio */
+    --bad:#c0392b;         /* rosso power/errore */
+    --warn:#c27c2c;        /* arancio */
+    --pill-pos-bg:#e7f5ec;
+    --pill-pos-bd:#9ad4b0;
+    --pill-neg-bg:#fdecec;
+    --pill-neg-bd:#f09ea0;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    line-height:1.25;
+  }
+
+  /* ===== Topbar stile "testata" ===== */
+  header{
+    position:sticky; top:0; z-index:10;
+    background:linear-gradient(180deg, #faf8f4, #f0ede7);
+    border-bottom:1px solid var(--line);
+    padding:12px 14px;
+  }
+  .bar{
+    display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+  }
+  .logo{
+    width:48px; height:48px; border-radius:10px; background:#ffffff;
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    overflow:hidden; color:#9aa1a8; font-size:12px;
+  }
+  .title h1{margin:0; font-size:20px}
+  .title small{display:block; color:var(--muted)}
+  .actions{display:flex; gap:8px}
+  .btn{
+    border:none; border-radius:12px; padding:12px 14px; font-weight:700;
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    box-shadow:0 1px 0 #ffffff, 0 1px 3px #0000000f;
+  }
+  .btn svg{width:20px; height:20px}
+  .btn:focus{outline:3px solid #bcd7ff}
+  .btn-save{background:#e9f6ee; color:#0e5e22; border:1px solid #bfe9cb}
+  .btn-print{background:#eef3fb; color:#264d89; border:1px solid #c7d6f4}
+  .btn-export{background:#f7efe8; color:#7a4a0d; border:1px solid #efd8c2}
+  .btn-power{background:#fdecec; color:#7f1d1d; border:1px solid #f2b4b5}
+
+  /* ===== Contenitore ===== */
+  .wrapper{padding:14px}
+  .grid{display:grid; gap:14px; grid-template-columns:1fr}
+  @media(min-width:980px){ .grid{grid-template-columns:1.1fr .9fr} }
+
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);
+    border-radius:16px; padding:16px;
+  }
+  .card h2{margin:0 0 10px; font-size:16px}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .row3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+  .row4{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+  label{font-size:13px; color:#444; display:block; margin-bottom:6px}
+
+  input[type=number], input[type=text], input[type=date], input[type=file], textarea, select{
+    width:100%; padding:14px 12px; border-radius:12px;
+    border:1px solid #cfcac2; background:#ffffff; color:#1f2937; font-size:16px;
+  }
+  input:focus, textarea:focus, select:focus{outline:3px solid #d7e8ff; border-color:#b7cff1}
+  textarea{min-height:70px; resize:vertical}
+
+  table{width:100%; border-collapse:separate; border-spacing:0; font-size:15px}
+  th,td{padding:12px 8px; text-align:right; border-bottom:1px dashed #cfcac2}
+  td:first-child, th:first-child{text-align:left}
+  th{font-weight:700; color:#3b3b3b; background:#f6f4f0; position:sticky; top:0}
+  tfoot td{font-weight:800}
+  .muted{color:var(--muted)}
+  .tot{font-size:18px}
+
+  .pill{display:inline-block; padding:6px 10px; border-radius:999px; font-size:13px; font-weight:800}
+  .pos{background:var(--pill-pos-bg); color:#0e5e22; border:1px solid var(--pill-pos-bd)}
+  .neg{background:var(--pill-neg-bg); color:#7f1d1d; border:1px solid var(--pill-neg-bd)}
+  .sep{height:1px; background:var(--line); margin:12px 0}
+
+  /* ===== Footer azioni flottante su mobile ===== */
+  .fabbar{
+    position:sticky; bottom:0; background:#fbfaf7cc; backdrop-filter:saturate(160%) blur(4px);
+    border-top:1px solid var(--line); padding:10px; display:flex; gap:8px; justify-content:center;
+  }
+  .fabbar .btn{padding:12px 18px}
+
+  /* Print */
+  @media print{
+    header, .fabbar{display:none}
+    body{background:#fff}
+    .card{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">
+      <div class="logo" id="logoBox">LOGO</div>
+      <div class="title">
+        <h1>Incasso “Virtuale” — AWP</h1>
+        <small id="subInfo">Locale: — • Data: —</small>
+      </div>
+    </div>
+    <div></div>
+    <div class="actions">
+      <button class="btn btn-save" id="btnSave">
+        <!-- check icon -->
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Salva JSON
+      </button>
+      <button class="btn btn-export" id="btnLoad">
+        <!-- upload icon -->
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Carica
+      </button>
+      <input id="fileJson" type="file" accept="application/json" style="display:none">
+      <button class="btn btn-print" id="btnPrint">
+        <!-- print icon -->
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 9V2h12v7M6 18h12v4H6v-4zM4 13h16a2 2 0 0 0 2-2V9H2v2a2 2 0 0 0 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Stampa
+      </button>
+      <button class="btn btn-power" id="btnReset">
+        <!-- power icon -->
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2v10m6.364-6.364a9 9 0 1 1-12.728 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="wrapper">
+  <div class="grid">
+    <!-- Dati generali -->
+    <section class="card">
+      <h2>Dati del locale</h2>
+      <div class="row4">
+        <div>
+          <label>Nome locale</label>
+          <input id="nomeLocale" type="text" placeholder="Es. Bar Gallo Nero">
+        </div>
+        <div>
+          <label>Data incasso</label>
+          <input id="dataIncasso" type="date">
+        </div>
+        <div>
+          <label>Note</label>
+          <input id="note" type="text" placeholder="Annotazioni facoltative">
+        </div>
+        <div>
+          <label>Logo (immagine)</label>
+          <input id="logoFile" type="file" accept="image/*">
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="row4">
+        <div>
+          <label>Quantità Slot</label>
+          <input id="qSlot" type="number" min="0" step="1" value="4">
+        </div>
+        <div>
+          <label>Quantità Cambiamonete</label>
+          <input id="qChg" type="number" min="0" step="1" value="1">
+        </div>
+        <div>
+          <label>Fondo per singola Slot (€)</label>
+          <input id="fondoSlotUnit" type="number" min="0" step="0.01" value="150">
+        </div>
+        <div>
+          <label>Fondo per singolo Cambiamonete (€)</label>
+          <input id="fondoChgUnit" type="number" min="0" step="0.01" value="1000">
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="actions">
+        <button class="btn" id="applyQuant">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Applica quantità
+        </button>
+        <button class="btn" id="applyFunds">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v8m-4-4h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Applica fondi unitari
+        </button>
+        <button class="btn" id="btnDemo">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h18M12 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Carica esempio
+        </button>
+      </div>
+    </section>
+
+    <!-- Riepilogo -->
+    <section class="card">
+      <h2>Riepilogo</h2>
+      <table>
+        <tbody>
+          <tr><td class="muted">Totale fondi Slot</td><td id="totFondiSlot" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Totale fondi Cambiamonete</td><td id="totFondiChg" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Totale fondi (Slot + Cambia)</td><td id="totFondi" class="right">€ 0,00</td></tr>
+        </tbody>
+      </table>
+      <div class="sep"></div>
+      <table>
+        <tbody>
+          <tr><td class="muted">Somma monete in tutte le Slot</td><td id="sumMoneteSlot" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Somma monete Cambiamonete</td><td id="sumMoneteChg" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Somma banconote Cambiamonete</td><td id="sumBancChg" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Altre monete + banconote</td><td id="sumAltre" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Acconti periodo</td><td id="sumAcconti" class="right">€ 0,00</td></tr>
+          <tr><td class="muted">Somma utili lordi (Σ(IN−OUT))</td><td id="sumUtili" class="right">€ 0,00</td></tr>
+        </tbody>
+      </table>
+      <div class="sep"></div>
+      <table>
+        <tfoot>
+          <tr>
+            <td class="tot">Incasso Virtuale atteso</td>
+            <td id="virtual" class="right tot">€ 0,00</td>
+          </tr>
+          <tr>
+            <td class="tot">Differenza</td>
+            <td class="right"><span id="esitoPill" class="pill">—</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <!-- Slot -->
+    <section class="card" style="grid-column:1 / -1">
+      <h2>Slot (monete + IN/OUT)</h2>
+      <div class="muted" style="margin-bottom:8px">Inserisci <b>Monete</b>, <b>IN periodo</b>, <b>OUT periodo</b>. L’utile lordo = <b>IN − OUT</b>.</div>
+      <div style="overflow:auto">
+        <table id="tblSlot">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Monete (€)</th>
+              <th>IN periodo (€)</th>
+              <th>OUT periodo (€)</th>
+              <th>Utile lordo (€)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr>
+              <td class="muted">Somme</td>
+              <td id="sumMoneteSlot_f" class="right">€ 0,00</td>
+              <td id="sumIn_f" class="right">€ 0,00</td>
+              <td id="sumOut_f" class="right">€ 0,00</td>
+              <td id="sumUtile_f" class="right">€ 0,00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="sep"></div>
+      <div class="row3">
+        <div>
+          <label>Altre monete (€)</label>
+          <input id="altreMonete" type="number" min="0" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Altre banconote (€)</label>
+          <input id="altreBanconote" type="number" min="0" step="0.01" value="0">
+        </div>
+        <div>
+          <label>Acconti periodo (€)</label>
+          <input id="accontiPeriodo" type="number" min="0" step="0.01" value="0">
+        </div>
+      </div>
+    </section>
+
+    <!-- Cambiamonete -->
+    <section class="card" style="grid-column:1 / -1">
+      <h2>Cambiamonete</h2>
+      <div style="overflow:auto">
+        <table id="tblChg">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fondo (€)</th>
+              <th>Monete (€)</th>
+              <th>Banconote (€)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr>
+              <td class="muted">Somme</td>
+              <td id="sumFondoChg_f" class="right">€ 0,00</td>
+              <td id="sumMoneteChg_f" class="right">€ 0,00</td>
+              <td id="sumBancChg_f" class="right">€ 0,00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Barra azioni mobile -->
+<div class="fabbar">
+  <button class="btn btn-save" id="btnSave2">Salva</button>
+  <button class="btn btn-export" id="btnLoad2">Carica</button>
+  <button class="btn btn-print" id="btnPrint2">Stampa</button>
+  <button class="btn btn-power" id="btnReset2">Reset</button>
+</div>
+
+<script>
+  const eur = (n)=> new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format((+n||0).toFixed(2));
+  const $ = (s)=> document.querySelector(s);
+
+  // Elements
+  const qSlot=$('#qSlot'), qChg=$('#qChg'), fondoSlotUnit=$('#fondoSlotUnit'), fondoChgUnit=$('#fondoChgUnit');
+  const tblSlot=$('#tblSlot tbody'), tblChg=$('#tblChg tbody');
+  const altreMonete=$('#altreMonete'), altreBanconote=$('#altreBanconote'), accontiPeriodo=$('#accontiPeriodo');
+
+  const totFondiSlot=$('#totFondiSlot'), totFondiChg=$('#totFondiChg'), totFondi=$('#totFondi');
+  const sumMoneteSlot=$('#sumMoneteSlot'), sumMoneteChg=$('#sumMoneteChg'), sumBancChg=$('#sumBancChg');
+  const sumAltre=$('#sumAltre'), sumAcconti=$('#sumAcconti'), sumUtili=$('#sumUtili');
+  const virtualEl=$('#virtual'), esitoPill=$('#esitoPill');
+
+  const sumMoneteSlot_f=$('#sumMoneteSlot_f'), sumIn_f=$('#sumIn_f'), sumOut_f=$('#sumOut_f'), sumUtile_f=$('#sumUtile_f');
+  const sumFondoChg_f=$('#sumFondoChg_f'), sumMoneteChg_f=$('#sumMoneteChg_f'), sumBancChg_f=$('#sumBancChg_f');
+
+  const nomeLocale=$('#nomeLocale'), dataIncasso=$('#dataIncasso'), note=$('#note');
+  const subInfo=$('#subInfo'), logoBox=$('#logoBox'), logoFile=$('#logoFile');
+  const fileJson=$('#fileJson');
+
+  // Buttons mapping
+  const btnSave=$('#btnSave'), btnLoad=$('#btnLoad'), btnPrint=$('#btnPrint'), btnReset=$('#btnReset');
+  const btnSave2=$('#btnSave2'), btnLoad2=$('#btnLoad2'), btnPrint2=$('#btnPrint2'), btnReset2=$('#btnReset2');
+  const applyQuant=$('#applyQuant'), applyFunds=$('#applyFunds'), btnDemo=$('#btnDemo');
+
+  [btnSave,btnSave2].forEach(b=>b.addEventListener('click', saveJson));
+  [btnLoad,btnLoad2].forEach(b=>b.addEventListener('click', ()=> fileJson.click()));
+  [btnPrint,btnPrint2].forEach(b=>b.addEventListener('click', ()=> window.print()));
+  [btnReset,btnReset2].forEach(b=>b.addEventListener('click', resetAll));
+
+  fileJson.addEventListener('change', handleJsonFile);
+  applyQuant.addEventListener('click', ()=>{ buildTables(); calc(); persistState(); });
+  applyFunds.addEventListener('click', applyFundsToRows);
+  btnDemo.addEventListener('click', loadDemo);
+
+  // Brand
+  nomeLocale.addEventListener('input', updateSubInfo);
+  dataIncasso.addEventListener('input', updateSubInfo);
+  function updateSubInfo(){
+    const d = dataIncasso.value ? new Date(dataIncasso.value+'T00:00:00').toLocaleDateString('it-IT') : '—';
+    subInfo.textContent = `Locale: ${nomeLocale.value||'—'} • Data: ${d}`;
+    persistState();
+  }
+  logoFile.addEventListener('change', (e)=>{
+    const f = e.target.files?.[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ev=>{
+      const url=ev.target.result;
+      logoBox.textContent='';
+      const img = new Image(); img.src=url; img.alt='logo'; img.style.maxWidth='100%'; img.style.maxHeight='100%';
+      logoBox.appendChild(img);
+      localStorage.setItem('ivawp_logo', url);
+    };
+    r.readAsDataURL(f);
+  });
+
+  // Build tables
+  function buildTables(){
+    // Slot
+    const nS=Math.max(0, parseInt(qSlot.value||0));
+    tblSlot.innerHTML='';
+    for(let i=0;i<nS;i++){
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td class="muted">S${i+1}</td>
+        <td><input type="number" step="0.01" min="0" value="0" data-k="monete"></td>
+        <td><input type="number" step="0.01" min="0" value="0" data-k="in"></td>
+        <td><input type="number" step="0.01" min="0" value="0" data-k="out"></td>
+        <td class="right" data-k="utile">€ 0,00</td>`;
+      tblSlot.appendChild(tr);
+    }
+    // Cambiamonete
+    const nC=Math.max(0, parseInt(qChg.value||0));
+    tblChg.innerHTML='';
+    for(let i=0;i<nC;i++){
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td class="muted">C${i+1}</td>
+        <td><input type="number" step="0.01" min="0" value="${fondoChgUnit.value||0}" data-k="fondo"></td>
+        <td><input type="number" step="0.01" min="0" value="0" data-k="monete"></td>
+        <td><input type="number" step="0.01" min="0" value="0" data-k="banconote"></td>`;
+      tblChg.appendChild(tr);
+    }
+    document.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', ()=>{ calc(); persistState(); });
+    });
+  }
+
+  function applyFundsToRows(){
+    const unitChg=+fondoChgUnit.value||0;
+    tblChg.querySelectorAll('tr').forEach(tr=>{
+      const f=tr.querySelector('input[data-k="fondo"]');
+      f.value=unitChg.toFixed(2);
+    });
+    calc(); persistState();
+  }
+
+  function sumInputs(rows, selector){
+    let s=0; rows.forEach(r=>{ const i=r.querySelector(selector); s += +i.value||0; }); return s;
+  }
+
+  function calc(){
+    const nS = Math.max(0, parseInt(qSlot.value||0));
+    const fondoUnitSlot = +fondoSlotUnit.value || 0;
+    const totFondoSlot = fondoUnitSlot * nS;
+
+    const chgRows=[...tblChg.querySelectorAll('tr')];
+    const sumFondoChg=sumInputs(chgRows,'input[data-k="fondo"]');
+    const sumMoneteChg=sumInputs(chgRows,'input[data-k="monete"]');
+    const sumBancChg=sumInputs(chgRows,'input[data-k="banconote"]');
+
+    const slotRows=[...tblSlot.querySelectorAll('tr')];
+    let sMoneteSlot=0, sIn=0, sOut=0, sUtile=0;
+    slotRows.forEach(r=>{
+      const vMon=+r.querySelector('input[data-k="monete"]').value||0;
+      const vIn=+r.querySelector('input[data-k="in"]').value||0;
+      const vOut=+r.querySelector('input[data-k="out"]').value||0;
+      const utile=vIn - vOut;
+      r.querySelector('[data-k="utile"]').textContent=eur(utile);
+      sMoneteSlot+=vMon; sIn+=vIn; sOut+=vOut; sUtile+=utile;
+    });
+
+    const vAltMon=+altreMonete.value||0;
+    const vAltBan=+altreBanconote.value||0;
+    const vAcconti=+accontiPeriodo.value||0;
+
+    const totFondiAll=totFondoSlot + sumFondoChg;
+    const sommaValori=sMoneteSlot + sumMoneteChg + sumBancChg + vAltMon + vAltBan + vAcconti;
+    const incassoVirtuale = sommaValori - totFondiAll - sUtile;
+
+    // UI
+    totFondiSlot.textContent=eur(totFondoSlot);
+    totFondiChg.textContent=eur(sumFondoChg);
+    totFondi.textContent=eur(totFondiAll);
+
+    sumMoneteSlot.textContent=eur(sMoneteSlot);
+    sumMoneteChg.textContent=eur(sumMoneteChg);
+    sumBancChg.textContent=eur(sumBancChg);
+    sumAltre.textContent=eur(vAltMon+vAltBan);
+    sumAcconti.textContent=eur(vAcconti);
+    sumUtili.textContent=eur(sUtile);
+
+    sumMoneteSlot_f.textContent=eur(sMoneteSlot);
+    sumIn_f.textContent=eur(sIn);
+    sumOut_f.textContent=eur(sOut);
+    sumUtile_f.textContent=eur(sUtile);
+
+    sumFondoChg_f.textContent=eur(sumFondoChg);
+    sumMoneteChg_f.textContent=eur(sumMoneteChg);
+    sumBancChg_f.textContent=eur(sumBancChg);
+
+    virtualEl.textContent=eur(incassoVirtuale);
+    if (Math.abs(incassoVirtuale) < 0.005){
+      esitoPill.textContent='OK — Zero';
+      esitoPill.className='pill';
+    } else if (incassoVirtuale > 0){
+      esitoPill.textContent='Crescono '+eur(incassoVirtuale);
+      esitoPill.className='pill pos';
+    } else {
+      esitoPill.textContent='Mancano '+eur(incassoVirtuale);
+      esitoPill.className='pill neg';
+    }
+  }
+
+  // Persistence
+  function captureState(){
+    const slots=[...tblSlot.querySelectorAll('tr')].map(r=>({monete:+(r.querySelector('input[data-k="monete"]').value||0), in:+(r.querySelector('input[data-k="in"]').value||0), out:+(r.querySelector('input[data-k="out"]').value||0)}));
+    const chg=[...tblChg.querySelectorAll('tr')].map(r=>({fondo:+(r.querySelector('input[data-k="fondo"]').value||0), monete:+(r.querySelector('input[data-k="monete"]').value||0), banconote:+(r.querySelector('input[data-k="banconote"]').value||0)}));
+    return {
+      meta:{nomeLocale:nomeLocale.value||'', dataIncasso:dataIncasso.value||'', note:note.value||''},
+      qSlot:+qSlot.value||0, qChg:+qChg.value||0,
+      fondoSlotUnit:+fondoSlotUnit.value||0, fondoChgUnit:+fondoChgUnit.value||0,
+      slots, chg,
+      altreMonete:+altreMonete.value||0, altreBanconote:+altreBanconote.value||0, accontiPeriodo:+accontiPeriodo.value||0,
+      logo: localStorage.getItem('ivawp_logo')||null
+    };
+  }
+  function applyState(s){
+    qSlot.value=s.qSlot||0; qChg.value=s.qChg||0;
+    fondoSlotUnit.value=s.fondoSlotUnit||0; fondoChgUnit.value=s.fondoChgUnit||0;
+    buildTables();
+    const slotRows=[...tblSlot.querySelectorAll('tr')];
+    (s.slots||[]).forEach((v,i)=>{ if(!slotRows[i])return; slotRows[i].querySelector('input[data-k="monete"]').value=v.monete||0; slotRows[i].querySelector('input[data-k="in"]').value=v.in||0; slotRows[i].querySelector('input[data-k="out"]').value=v.out||0; });
+    const chgRows=[...tblChg.querySelectorAll('tr')];
+    (s.chg||[]).forEach((v,i)=>{ if(!chgRows[i])return; chgRows[i].querySelector('input[data-k="fondo"]').value=v.fondo||0; chgRows[i].querySelector('input[data-k="monete"]').value=v.monete||0; chgRows[i].querySelector('input[data-k="banconote"]').value=v.banconote||0; });
+    altreMonete.value=s.altreMonete||0; altreBanconote.value=s.altreBanconote||0; accontiPeriodo.value=s.accontiPeriodo||0;
+    nomeLocale.value=s.meta?.nomeLocale||''; dataIncasso.value=s.meta?.dataIncasso||''; note.value=s.meta?.note||''; updateSubInfo();
+    if(s.logo){ localStorage.setItem('ivawp_logo', s.logo); const img=new Image(); img.src=s.logo; img.alt='logo'; img.style.maxWidth='100%'; img.style.maxHeight='100%'; logoBox.textContent=''; logoBox.appendChild(img); }
+    calc();
+  }
+  function saveJson(){
+    const data=captureState();
+    const blob=new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='incasso-virtuale-crema.json'; a.click(); URL.revokeObjectURL(url);
+  }
+  function handleJsonFile(e){
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload = ev=>{ try{ applyState(JSON.parse(ev.target.result)); } catch{ alert('JSON non valido'); } };
+    r.readAsText(f); e.target.value='';
+  }
+  function persistState(){ localStorage.setItem('ivawp_state_crema', JSON.stringify(captureState())); }
+  function resetAll(){
+    localStorage.removeItem('ivawp_state_crema');
+    document.querySelectorAll('input').forEach(i=>{
+      if(['qSlot','qChg','fondoSlotUnit','fondoChgUnit','nomeLocale','dataIncasso','note','logoFile'].includes(i.id)) return;
+      if(i.type==='number') i.value=0; else i.value='';
+    });
+    buildTables(); calc(); updateSubInfo();
+  }
+
+  function loadDemo(){
+    qSlot.value=5; qChg.value=2;
+    fondoSlotUnit.value=150; fondoChgUnit.value=1000;
+    buildTables();
+    const s=[{m:320,in:2100,out:1950},{m:280,in:1900,out:1800},{m:410,in:2600,out:2605},{m:150,in:1100,out:1000},{m:520,in:2900,out:2750}];
+    [...tblSlot.querySelectorAll('tr')].forEach((r,i)=>{ const v=s[i]; if(!v) return; r.querySelector('input[data-k="monete"]').value=v.m; r.querySelector('input[data-k="in"]').value=v.in; r.querySelector('input[data-k="out"]').value=v.out; });
+    const c=[{f:1000,mon:800,ban:1200},{f:1000,mon:600,ban:900}];
+    [...tblChg.querySelectorAll('tr')].forEach((r,i)=>{ const v=c[i]; if(!v) return; r.querySelector('input[data-k="fondo"]').value=v.f; r.querySelector('input[data-k="monete"]').value=v.mon; r.querySelector('input[data-k="banconote"]').value=v.ban; });
+    altreMonete.value=50; altreBanconote.value=100; accontiPeriodo.value=500;
+    calc(); persistState();
+  }
+
+  // Init
+  (function init(){
+    const raw=localStorage.getItem('ivawp_state_crema');
+    if(raw){ try{ applyState(JSON.parse(raw)); return; }catch{} }
+    buildTables(); calc(); updateSubInfo();
+  })();
+</script>
+</body>
+</html>
